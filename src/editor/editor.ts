@@ -1,12 +1,22 @@
 import { EditorView } from '@codemirror/view'
 import { EditorState } from '@codemirror/state'
-import { baseExtensions, createTabState, languageConf } from './extensions'
+import { syntaxHighlighting } from '@codemirror/language'
+import {
+  baseExtensions,
+  createTabState,
+  languageConf,
+  highlightConf,
+  darkHighlight,
+  lightHighlight,
+  type EditorTheme,
+} from './extensions'
 import type { EditorCallbacks } from './extensions'
 import type { LangKind } from './languages'
 
 export class CodeEditor {
   readonly view: EditorView
   private cb: EditorCallbacks
+  private currentTheme: EditorTheme = 'dark'
 
   constructor(parent: HTMLElement, cb: EditorCallbacks = {}) {
     this.cb = cb
@@ -14,7 +24,7 @@ export class CodeEditor {
     const initial = EditorState.create({
       doc: '',
       extensions: [
-        ...baseExtensions(cb),
+        ...baseExtensions(cb, this.currentTheme),
         languageConf.of([]),
       ],
     })
@@ -22,14 +32,25 @@ export class CodeEditor {
     this.view = new EditorView({ state: initial, parent })
   }
 
-  /** Создать новое состояние для вкладки (используется TabManager'ом) */
   createState(content: string, language: LangKind): EditorState {
-    return createTabState(content, language, this.cb)
+    return createTabState(content, language, this.cb, this.currentTheme)
   }
 
-  /** Установить состояние — при переключении вкладок */
   setState(state: EditorState) {
     this.view.setState(state)
+    this.applyTheme()
+  }
+
+  setHighlight(theme: EditorTheme) {
+    this.currentTheme = theme
+    this.applyTheme()
+  }
+
+  private applyTheme() {
+    const style = this.currentTheme === 'light' ? lightHighlight : darkHighlight
+    this.view.dispatch({
+      effects: highlightConf.reconfigure(syntaxHighlighting(style)),
+    })
   }
 
   focus() {

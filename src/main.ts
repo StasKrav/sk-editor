@@ -248,28 +248,29 @@ window.addEventListener('keydown', async e => {
 setStatus('Готово. Откройте папку проекта (Ctrl+O)')
 
 // ── 13. Тема ────────────────────────────────
-type ThemeName = 'zenburn' | 'dracula'
+type ThemeName = 'zenburn' | 'light'
 
 const themeSelect = document.getElementById('theme-select') as HTMLSelectElement
 
-function setTheme(name: ThemeName) {
+function applyTheme(name: ThemeName) {
   document.documentElement.dataset.theme = name
   localStorage.setItem('theme', name)
   themeSelect.value = name
+  editor.setHighlight(name === 'light' ? 'light' : 'dark')
 }
 
 function getTheme(): ThemeName {
-  const saved = localStorage.getItem('theme') as ThemeName | null
-  return saved === 'dracula' ? 'dracula' : 'zenburn'
+  const saved = localStorage.getItem('theme')
+  return saved === 'light' ? 'light' : 'zenburn'
 }
 
 themeSelect.addEventListener('change', () => {
-  setTheme(themeSelect.value as ThemeName)
-  setStatus(`Тема: ${themeSelect.value}`)
+  const name = themeSelect.value as ThemeName
+  applyTheme(name)
+  setStatus(`Тема: ${name}`)
 })
 
-// Применяем при загрузке
-setTheme(getTheme())
+applyTheme(getTheme())
 
 // ── 14. Изменение ширины сайдбара ───────────
 const resizer = document.getElementById('resizer')!

@@ -64,3 +64,55 @@ export const zenburnHighlight = HighlightStyle.define([
   // Ошибки
   { tag: tags.invalid,                 color: '#cc9393', textDecoration: 'underline wavy' },
 ])
+
+/**
+ * Подсветка для светлой темы Solarized Light.
+ */
+export const solarizedLightHighlight = HighlightStyle.define([
+  { tag: tags.comment,                 color: '#93a1a1', fontStyle: 'italic' },
+  { tag: tags.lineComment,             color: '#93a1a1', fontStyle: 'italic' },
+  { tag: tags.blockComment,            color: '#93a1a1', fontStyle: 'italic' },
+  { tag: tags.docComment,              color: '#93a1a1', fontStyle: 'italic' },
+
+  { tag: tags.keyword,                 color: '#859900', fontWeight: 'bold' },
+  { tag: tags.controlKeyword,          color: '#859900', fontWeight: 'bold' },
+  { tag: tags.moduleKeyword,           color: '#859900', fontWeight: 'bold' },
+  { tag: tags.operatorKeyword,         color: '#859900' },
+  { tag: tags.definitionKeyword,       color: '#859900' },
+  { tag: tags.self,                    color: '#859900', fontStyle: 'italic' },
+
+  { tag: tags.string,                  color: '#2aa198' },
+  { tag: tags.special(tags.string),    color: '#2aa198' },
+  { tag: tags.regexp,                  color: '#dc322f' },
+  { tag: tags.character,               color: '#2aa198' },
+
+  { tag: tags.number,                  color: '#d33682' },
+  { tag: tags.bool,                    color: '#d33682' },
+  { tag: tags.null,                    color: '#d33682' },
+
+  { tag: tags.function(tags.variableName),                  color: '#268bd2' },
+  { tag: tags.function(tags.propertyName),                  color: '#268bd2' },
+  { tag: tags.function(tags.definition(tags.variableName)), color: '#268bd2' },
+
+  { tag: tags.variableName,            color: '#586e75' },
+  { tag: tags.definition(tags.variableName), color: '#586e75' },
+  { tag: tags.local(tags.variableName),color: '#586e75' },
+  { tag: tags.special(tags.variableName), color: '#cb4b16' },
+
+  { tag: tags.typeName,                color: '#b58900' },
+  { tag: tags.className,               color: '#b58900' },
+  { tag: tags.namespace,               color: '#b58900' },
+
+  { tag: tags.propertyName,            color: '#586e75' },
+  { tag: tags.attributeName,           color: '#b58900' },
+  { tag: tags.attributeValue,          color: '#2aa198' },
+
+  { tag: tags.operator,                color: '#859900' },
+  { tag: tags.punctuation,             color: '#586e75' },
+  { tag: tags.bracket,                 color: '#586e75' },
+
+  { tag: tags.tagName,                 color: '#268bd2' },
+  { tag: tags.angleBracket,            color: '#93a1a1' },
+
+  { tag: tags.invalid,                 color: '#dc322f', textDecoration: 'underline wavy' },
+])
