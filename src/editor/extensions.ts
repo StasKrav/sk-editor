@@ -2,9 +2,12 @@ import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirro
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { searchKeymap, highlightSelectionMatches } from '@codemirror/search'
 import { bracketMatching, indentOnInput, foldGutter } from '@codemirror/language'
-import { oneDark } from '@codemirror/theme-one-dark'
 import { Compartment, EditorState } from '@codemirror/state'
 import { langExtension, type LangKind } from './languages'
+import themes from 'codemirror-5-themes'
+import { syntaxHighlighting } from '@codemirror/language'
+import { zenburnHighlight } from './cm-highlight'
+
 
 // Один compartment на всё приложение — язык активной вкладки
 export const languageConf = new Compartment()
@@ -29,10 +32,16 @@ export function baseExtensions(cb: EditorCallbacks) {
       ...historyKeymap,
       ...searchKeymap,
     ]),
-    oneDark,
+    themes['zenburn'],                 // фон, gutter — UI
+    syntaxHighlighting(zenburnHighlight), // ← подсветка токенов
     EditorView.theme({
       '&': { height: '100%' },
       '.cm-scroller': { overflow: 'auto' },
+      '.cm-gutters': {
+        minWidth: '3.5em',
+        width: '3.5em',
+        overflow: 'hidden',
+      },
     }),
     EditorView.updateListener.of(update => {
       if (update.docChanged) cb.onDocChanged?.(update.state)
