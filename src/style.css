@@ -32,8 +32,9 @@
   /* CodeMirror */
   --cm-bg:               #3f3f3f;
   --cm-gutter-bg:        #303030;
-  --cm-active-line:      rgba(255, 255, 255, 0.03);
-  --cm-active-gutter:    rgba(255, 255, 255, 0.05);
+  --cm-active-line:      rgba(255, 255, 255, 0.06);
+  --cm-active-gutter:    rgba(255, 255, 255, 0.08);
+  --cm-selection:        #5f7f9f;    /* сине-серый, отличим от фона */
 
   /* TOC */
   --toc-function:        #f0dfaf;
@@ -78,6 +79,7 @@
   --cm-gutter-bg:        #16161e;
   --cm-active-line:      rgba(255, 255, 255, 0.04);
   --cm-active-gutter:    rgba(255, 255, 255, 0.06);
+  --cm-selection:      #3d59a1;
 
   --toc-function:        #e0af68;
   --toc-class:           #7dcfff;
@@ -198,6 +200,16 @@ body {
   transition: background 0.15s ease;
 }
 
+#resizer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  right: -4px;
+  cursor: col-resize;
+}
+
 #resizer:hover,
 #resizer.dragging {
   background: var(--accent);      /* подсветка на всю ширину 4px */
@@ -262,7 +274,7 @@ body {
 
 .cm-editor .cm-selectionBackground,
 .cm-editor.cm-focused .cm-selectionBackground {
-  background: var(--bg-selection) !important;
+  background: var(--cm-selection) !important;
 }
 
 .cm-editor .cm-cursor {
@@ -271,6 +283,15 @@ body {
 
 .cm-scroller {
   font-family: 'JetBrains Mono', 'Consolas', monospace !important;
+}
+
+.cm-editor .cm-searchMatch {
+  background: rgba(255, 220, 100, 0.25);
+  outline: 1px solid rgba(255, 220, 100, 0.4);
+}
+
+.cm-editor .cm-searchMatch.cm-searchMatch-selected {
+  background: rgba(255, 180, 60, 0.5);
 }
 
 /* ─────────────────────────────────────────────
