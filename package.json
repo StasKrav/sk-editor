@@ -23,6 +23,7 @@
     "@codemirror/view": "^6.43.13",
     "codemirror": "^6.0.2",
     "parse5": "^8.0.1",
-    "postcss": "^8.5.29"
+    "postcss": "^8.5.29",
+    "prettier": "^3.9.9"
   }
 }

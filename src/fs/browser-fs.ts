@@ -1,4 +1,5 @@
 import type { FileEntry, FileSystemProvider } from './types'
+import { shouldIgnore } from './ignore'
 
 // File System Access API не входит в стандартный lib.dom.d.ts,
 // поэтому объявим минимальные типы сами
@@ -59,11 +60,16 @@ export class BrowserFileSystem implements FileSystemProvider {
     displayName: string,
   ): Promise<FileEntry> {
     const children: FileEntry[] = []
-
+  
     for await (const entry of dir.values()) {
+      const kind = entry.kind === 'directory' ? 'dir' : 'file'
+  
+      // ── фильтр ─────────────────────────────
+      if (shouldIgnore(entry.name, kind)) continue
+  
       const path = prefix ? `${prefix}/${entry.name}` : entry.name
-
-      if (entry.kind === 'directory') {
+  
+      if (kind === 'dir') {
         children.push(await this.readDir(entry, path, entry.name))
       } else {
         children.push({
@@ -73,13 +79,12 @@ export class BrowserFileSystem implements FileSystemProvider {
         })
       }
     }
-
-    // Сортировка: сначала папки, потом файлы, обе группы по алфавиту
+  
     children.sort((a, b) => {
       if (a.kind !== b.kind) return a.kind === 'dir' ? -1 : 1
       return a.name.localeCompare(b.name)
     })
-
+  
     return {
       name: displayName,
       path: prefix,

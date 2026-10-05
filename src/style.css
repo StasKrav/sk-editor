@@ -1,47 +1,167 @@
+/* ─────────────────────────────────────────────
+   Темы
+   ───────────────────────────────────────────── */
+:root {
+  /* Значения по умолчанию — тема Zenburn */
+
+  /* Фоны */
+  --bg-app:              #2b2b2b;
+  --bg-sidebar:          #303030;
+  --bg-editor:           #3f3f3f;
+  --bg-tabbar:           #303030;
+  --bg-tab-inactive:     #383838;
+  --bg-hover:            #4f4f4f;
+  --bg-selection:        #5f5f5f;
+  --bg-statusbar:        #7f9f7f;
+
+  /* Границы */
+  --border:              #4f4f4f;
+  --border-subtle:       #5f5f5f;
+  --accent:              #8cd0d3;
+
+  /* Текст */
+  --text-primary:        #dcdccc;
+  --text-secondary:      #dcdccc;
+  --text-muted:          #7f9f7f;
+  --text-dim:            #709080;
+  --text-inverse:        #dcdccc;
+
+  /* Акценты */
+  --modified-dot:        #f0dfaf;
+
+  /* CodeMirror */
+  --cm-bg:               #3f3f3f;
+  --cm-gutter-bg:        #303030;
+  --cm-active-line:      rgba(255, 255, 255, 0.03);
+  --cm-active-gutter:    rgba(255, 255, 255, 0.05);
+
+  /* TOC */
+  --toc-function:        #f0dfaf;
+  --toc-class:           #8cd0d3;
+  --toc-method:          #f0dfaf;
+  --toc-variable:        #dfaf8f;
+  --toc-selector:        #cc9393;
+  --toc-at-rule:         #dc8cc3;
+  --toc-css-variable:    #dfaf8f;
+  --toc-html-element:    #8cd0d3;
+  --toc-html-id:         #93e0e3;
+
+  /* Радиусы */
+  --radius-sm:           3px;
+  --radius-md:           4px;
+}
+
+/* ── Dracula theme ───────────────────────────── */
+[data-theme='dracula'] {
+  --bg-app:              #1a1b26;
+  --bg-sidebar:          #16161e;
+  --bg-editor:           #1a1b26;
+  --bg-tabbar:           #16161e;
+  --bg-tab-inactive:     #1f2029;
+  --bg-hover:            #24283b;
+  --bg-selection:        #364a82;
+  --bg-statusbar:        #7aa2f7;
+
+  --border:              #1f2335;
+  --border-subtle:       #292e42;
+  --accent:              #7aa2f7;
+
+  --text-primary:        #c0caf5;
+  --text-secondary:      #a9b1d6;
+  --text-muted:          #565f89;
+  --text-dim:            #414868;
+  --text-inverse:        #ffffff;
+
+  --modified-dot:        #e0af68;
+
+  --cm-bg:               #1a1b26;
+  --cm-gutter-bg:        #16161e;
+  --cm-active-line:      rgba(255, 255, 255, 0.04);
+  --cm-active-gutter:    rgba(255, 255, 255, 0.06);
+
+  --toc-function:        #e0af68;
+  --toc-class:           #7dcfff;
+  --toc-method:          #e0af68;
+  --toc-variable:        #bb9af7;
+  --toc-selector:        #f7768e;
+  --toc-at-rule:         #bb9af7;
+  --toc-css-variable:    #bb9af7;
+  --toc-html-element:    #7aa2f7;
+  --toc-html-id:         #7dcfff;
+}
+
+/* ─────────────────────────────────────────────
+   Базовое
+   ───────────────────────────────────────────── */
+
 * {
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   height: 100%;
   font-family: system-ui, -apple-system, sans-serif;
   font-size: 13px;
-  background: #1e1e1e;
-  color: #d4d4d4;
+  background: var(--bg-app);
+  color: var(--text-primary);
 }
 
 #app {
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: var(--sidebar-width, 260px) 1px 1fr;
   grid-template-rows: 1fr 24px;
   grid-template-areas:
-    "sidebar main"
-    "status  status";
+    'sidebar resizer main'
+    'status  status  status';
   height: 100vh;
 }
 
-/* ── Sidebar ───────────────────────────────── */
+/* ─────────────────────────────────────────────
+   Sidebar
+   ───────────────────────────────────────────── */
+
 #sidebar {
   grid-area: sidebar;
-  background: #252526;
-  border-right: 1px solid #333;
+  background: var(--bg-sidebar);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
+.sidebar-toolbar {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.sidebar-toolbar button {
+  flex: 1;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.sidebar-toolbar button:hover {
+  background: var(--bg-hover);
+}
+
 .sidebar-tabs {
   display: flex;
-  border-bottom: 1px solid #333;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
 .sidebar-tabs button {
   flex: 1;
   background: transparent;
-  color: #888;
+  color: var(--text-muted);
   border: none;
   padding: 8px;
   cursor: pointer;
@@ -50,12 +170,12 @@ html, body {
 }
 
 .sidebar-tabs button.active {
-  color: #fff;
-  border-bottom-color: #0e639c;
+  color: var(--text-inverse);
+  border-bottom-color: var(--accent);
 }
 
 .sidebar-tabs button:hover {
-  background: #2a2d2e;
+  background: var(--bg-hover);
 }
 
 .sidebar-body {
@@ -64,27 +184,49 @@ html, body {
   padding: 4px 0;
 }
 
-/* ── Main ──────────────────────────────────── */
+/* ─────────────────────────────────────────────
+   Resizer
+   ───────────────────────────────────────────── */
+
+#resizer {
+  grid-area: resizer;
+  background: var(--border);      /* ← фон самой полосы, а не прозрачный */
+  cursor: col-resize;
+  user-select: none;
+  position: relative;
+  z-index: 10;
+  transition: background 0.15s ease;
+}
+
+#resizer:hover,
+#resizer.dragging {
+  background: var(--accent);      /* подсветка на всю ширину 4px */
+}
+
+/* ─────────────────────────────────────────────
+   Main
+   ───────────────────────────────────────────── */
+
 #main {
   grid-area: main;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #1e1e1e;
+  background: var(--bg-app);
+  min-width: 0;   
 }
 
 #tab-bar {
   display: flex;
-  background: #252526;
-  border-bottom: 1px solid #333;
+  background: var(--bg-tabbar);
   min-height: 32px;
   overflow-x: auto;
   flex-shrink: 0;
 }
 
 #tab-bar:empty::before {
-  content: "Нет открытых файлов";
-  color: #666;
+  content: 'Нет открытых файлов';
+  color: var(--text-dim);
   padding: 8px 12px;
   font-size: 12px;
 }
@@ -95,21 +237,50 @@ html, body {
   position: relative;
 }
 
-/* CodeMirror должен занимать всё место */
+/* ── CodeMirror ─────────────────────────────── */
+
 .cm-editor {
   height: 100%;
   font-size: 13px;
+  background: var(--cm-bg) !important;
+  color: var(--text-primary);
+}
+
+.cm-editor .cm-gutters {
+  background: var(--cm-bg) !important;
+  border-right: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.cm-editor .cm-activeLine {
+  background: var(--cm-active-line) !important;
+}
+
+.cm-editor .cm-activeLineGutter {
+  background: var(--cm-active-gutter) !important;
+}
+
+.cm-editor .cm-selectionBackground,
+.cm-editor.cm-focused .cm-selectionBackground {
+  background: var(--bg-selection) !important;
+}
+
+.cm-editor .cm-cursor {
+  border-left-color: var(--text-primary);
 }
 
 .cm-scroller {
   font-family: 'JetBrains Mono', 'Consolas', monospace !important;
 }
 
-/* ── Statusbar ─────────────────────────────── */
+/* ─────────────────────────────────────────────
+   Statusbar
+   ───────────────────────────────────────────── */
+
 #status-bar {
   grid-area: status;
-  background: #007acc;
-  color: #fff;
+  background: var(--bg-statusbar);
+  color: var(--text-inverse);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -117,14 +288,46 @@ html, body {
   font-size: 12px;
 }
 
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#theme-select {
+  background: transparent;
+  color: var(--text-inverse);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 1px 4px;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+}
+
+#theme-select:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+#theme-select option {
+  background: var(--bg-app);
+  color: var(--text-primary);
+}
+
+/* ─────────────────────────────────────────────
+   Вкладки
+   ───────────────────────────────────────────── */
+
 .tab {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 6px 8px 6px 12px;
-  border-right: 1px solid #333;
-  background: #2d2d2d;
-  color: #999;
+  border-right: 1px solid var(--border);
+  background: var(--bg-tab-inactive);
+  color: var(--text-muted);
   cursor: pointer;
   font-size: 12px;
   white-space: nowrap;
@@ -134,9 +337,9 @@ html, body {
 }
 
 .tab.active {
-  background: #1e1e1e;
-  color: #fff;
-  border-top: 1px solid #0e639c;
+  background: var(--bg-editor);
+  color: var(--text-inverse);
+  border-top: 1px solid var(--accent);
   padding-top: 5px;
 }
 
@@ -148,7 +351,7 @@ html, body {
 
 .tab.modified .tab-name::before {
   content: '● ';
-  color: #e2c08d;
+  color: var(--modified-dot);
   font-size: 10px;
 }
 
@@ -157,7 +360,7 @@ html, body {
   font-size: 14px;
   line-height: 1;
   padding: 0 2px;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
 }
 
 .tab:hover .tab-close,
@@ -166,11 +369,14 @@ html, body {
 }
 
 .tab-close:hover {
-  background: #444;
+  background: var(--bg-hover);
   opacity: 1;
 }
 
-/* ── File tree ─────────────────────────────── */
+/* ─────────────────────────────────────────────
+   File tree
+   ───────────────────────────────────────────── */
+
 .tree-row {
   display: flex;
   align-items: center;
@@ -178,18 +384,18 @@ html, body {
   padding: 3px 8px;
   cursor: pointer;
   font-size: 12px;
-  color: #ccc;
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
 }
 
 .tree-row:hover {
-  background: #2a2d2e;
+  background: var(--bg-hover);
 }
 
 .tree-row.selected {
-  background: #094771;
-  color: #fff;
+  background: var(--bg-selection);
+  color: var(--text-inverse);
 }
 
 .tree-icon {
@@ -206,62 +412,16 @@ html, body {
 
 .tree-empty {
   padding: 16px 12px;
-  color: #666;
+  color: var(--text-dim);
   font-size: 12px;
   text-align: center;
   line-height: 1.5;
 }
 
-/* ── Sidebar tabs — уточнение ──────────────── */
-.sidebar-tabs {
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid #333;
-  flex-shrink: 0;
-}
+/* ─────────────────────────────────────────────
+   TOC
+   ───────────────────────────────────────────── */
 
-.sidebar-tabs button {
-  flex: 1;
-  background: transparent;
-  color: #888;
-  border: none;
-  padding: 8px;
-  cursor: pointer;
-  font-size: 12px;
-  border-bottom: 2px solid transparent;
-}
-
-.sidebar-tabs button.active {
-  color: #fff;
-  border-bottom-color: #0e639c;
-}
-
-.sidebar-tabs button:hover {
-  background: #2a2d2e;
-}
-
-/* Кнопка "Открыть папку" в шапке sidebar */
-.sidebar-toolbar {
-  display: flex;
-  border-bottom: 1px solid #333;
-  flex-shrink: 0;
-}
-
-.sidebar-toolbar button {
-  flex: 1;
-  background: transparent;
-  color: #ccc;
-  border: none;
-  padding: 6px 8px;
-  cursor: pointer;
-  font-size: 11px;
-}
-
-.sidebar-toolbar button:hover {
-  background: #2a2d2e;
-}
-
-/* ── TOC ───────────────────────────────────── */
 .toc-row {
   display: flex;
   align-items: center;
@@ -269,13 +429,13 @@ html, body {
   padding: 3px 8px;
   cursor: pointer;
   font-size: 12px;
-  color: #ccc;
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
 }
 
 .toc-row:hover {
-  background: #2a2d2e;
+  background: var(--bg-hover);
 }
 
 .toc-icon {
@@ -285,15 +445,15 @@ html, body {
   font-size: 11px;
 }
 
-.toc-icon-function { color: #dcdcaa; }
-.toc-icon-class    { color: #4ec9b0; }
-.toc-icon-method   { color: #dcdcaa; }
-.toc-icon-variable { color: #9cdcfe; }
-.toc-icon-selector { color: #ce9178; }
-.toc-icon-at-rule  { color: #c586c0; }
-.toc-icon-css-variable { color: #9cdcfe; }
-.toc-icon-html-element { color: #569cd6; }
-.toc-icon-html-id  { color: #4ec9b0; }
+.toc-icon-function      { color: var(--toc-function); }
+.toc-icon-class         { color: var(--toc-class); }
+.toc-icon-method        { color: var(--toc-method); }
+.toc-icon-variable      { color: var(--toc-variable); }
+.toc-icon-selector      { color: var(--toc-selector); }
+.toc-icon-at-rule       { color: var(--toc-at-rule); }
+.toc-icon-css-variable  { color: var(--toc-css-variable); }
+.toc-icon-html-element  { color: var(--toc-html-element); }
+.toc-icon-html-id       { color: var(--toc-html-id); }
 
 .toc-name {
   overflow: hidden;
@@ -302,29 +462,31 @@ html, body {
 }
 
 .toc-line {
-  color: #666;
+  color: var(--text-dim);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 
-/* Поле фильтра */
 .toc-filter {
   padding: 6px 8px;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
 .toc-filter input {
   width: 100%;
-  background: #1e1e1e;
-  border: 1px solid #3c3c3c;
-  color: #ccc;
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
   padding: 4px 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   outline: none;
 }
 
 .toc-filter input:focus {
-  border-color: #0e639c;
+  border-color: var(--accent);
 }
+
+
+

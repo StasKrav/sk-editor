@@ -8,6 +8,7 @@ import { parseToc } from './toc'
 import { TocView } from './toc/toc-view'
 import type { FileEntry } from './fs/types'
 import type { TocSymbol } from './toc/types'
+import { formatCode } from './format/prettier'
 
 // ── 1. DOM-элементы ─────────────────────────
 const editorContainer = document.getElementById('editor-container')!
@@ -127,6 +128,43 @@ sidebarTabBtns.forEach(btn => {
   })
 })
 
+// ===== FORMAT =======
+async function formatActiveTab() {
+  const tab = tabs.getActive()
+  if (!tab) {
+    setStatus('Нет активной вкладки')
+    return
+  }
+
+  tabs.persistActive()
+  const code = editor.view.state.doc.toString()
+
+  setStatus('Форматирование...')
+  const result = await formatCode(code, tab.language)
+
+  if (!result.ok) {
+    setStatus(`Prettier: ${result.error}`)
+    return
+  }
+
+  if (result.code === code) {
+    setStatus('Уже отформатировано')
+    return
+  }
+
+  // Применяем одной транзакцией — это сохраняет undo-историю
+  // и корректно двигает курсор.
+  editor.view.dispatch({
+    changes: {
+      from: 0,
+      to: editor.view.state.doc.length,
+      insert: result.code,
+    },
+  })
+
+  setStatus('Отформатировано')
+}
+
 // ── 9. Реакция на смену вкладок ─────────────
 tabs.onChange(e => {
   tabBar.render(e)
@@ -149,6 +187,13 @@ btnOpenFolder.addEventListener('click', async () => {
 // ── 11. Горячие клавиши ─────────────────────
 window.addEventListener('keydown', async e => {
   const ctrl = e.ctrlKey || e.metaKey
+
+  // Ctrl+Shift+F — форматировать активную вкладку
+  if (ctrl && e.shiftKey && e.key === 'F') {
+    e.preventDefault()
+    formatActiveTab()
+    return
+  }
 
   // Ctrl+S — сохранить активную вкладку
   if (ctrl && e.key === 's') {
@@ -201,3 +246,74 @@ window.addEventListener('keydown', async e => {
 
 // ── 12. Стартовое состояние ─────────────────
 setStatus('Готово. Откройте папку проекта (Ctrl+O)')
+
+// ── 13. Тема ────────────────────────────────
+type ThemeName = 'zenburn' | 'dracula'
+
+const themeSelect = document.getElementById('theme-select') as HTMLSelectElement
+
+function setTheme(name: ThemeName) {
+  document.documentElement.dataset.theme = name
+  localStorage.setItem('theme', name)
+  themeSelect.value = name
+}
+
+function getTheme(): ThemeName {
+  const saved = localStorage.getItem('theme') as ThemeName | null
+  return saved === 'dracula' ? 'dracula' : 'zenburn'
+}
+
+themeSelect.addEventListener('change', () => {
+  setTheme(themeSelect.value as ThemeName)
+  setStatus(`Тема: ${themeSelect.value}`)
+})
+
+// Применяем при загрузке
+setTheme(getTheme())
+
+// ── 14. Изменение ширины сайдбара ───────────
+const resizer = document.getElementById('resizer')!
+
+const MIN_SIDEBAR = 160
+const MAX_SIDEBAR = 600
+const STORAGE_KEY = 'sidebar-width'
+
+function setSidebarWidth(px: number) {
+  const clamped = Math.max(MIN_SIDEBAR, Math.min(MAX_SIDEBAR, px))
+  document.documentElement.style.setProperty('--sidebar-width', `${clamped}px`)
+  localStorage.setItem(STORAGE_KEY, String(clamped))
+}
+
+// восстановление при загрузке
+const savedWidth = parseInt(localStorage.getItem(STORAGE_KEY) ?? '', 10)
+if (!isNaN(savedWidth)) setSidebarWidth(savedWidth)
+
+let dragging = false
+
+resizer.addEventListener('mousedown', e => {
+  e.preventDefault()
+  dragging = true
+  resizer.classList.add('dragging')
+  document.body.style.cursor = 'col-resize'
+  // временно отключаем выделение текста по всему документу
+  document.body.style.userSelect = 'none'
+})
+
+window.addEventListener('mousemove', e => {
+  if (!dragging) return
+  // ширина = позиция мыши относительно левого края окна
+  setSidebarWidth(e.clientX)
+})
+
+window.addEventListener('mouseup', () => {
+  if (!dragging) return
+  dragging = false
+  resizer.classList.remove('dragging')
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+})
+
+// двойной клик — сброс к дефолтной ширине
+resizer.addEventListener('dblclick', () => {
+  setSidebarWidth(260)
+})
