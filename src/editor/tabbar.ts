@@ -1,4 +1,4 @@
-import type { Tab, TabChangeEvent } from './tabs'
+import type { TabChangeEvent } from './tabs'
 
 export interface TabBarCallbacks {
   onActivate: (id: string) => void
@@ -31,7 +31,10 @@ export class TabBar {
     this.el.innerHTML = ''
     for (const tab of event.tabs) {
       const div = document.createElement('div')
-      div.className = 'tab' + (tab.id === event.activeId ? ' active' : '')
+      div.className =
+        'tab' +
+        (tab.id === event.activeId ? ' active' : '') +
+        (tab.modified ? ' modified' : '')
       div.dataset.id = tab.id
 
       const name = document.createElement('span')

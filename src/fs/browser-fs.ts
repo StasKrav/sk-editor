@@ -1,19 +1,16 @@
 import type { FileEntry, FileSystemProvider } from './types'
 import { shouldIgnore } from './ignore'
 
-// File System Access API не входит в стандартный lib.dom.d.ts,
-// поэтому объявим минимальные типы сами
+// `window.showDirectoryPicker` отсутствует в lib.dom.d.ts — объявляем сами.
+// Остальные типы FS API (FileSystemDirectoryHandle, FileSystemFileHandle,
+// FileSystemWritableFileStream) уже входят в lib.dom, дублировать их нельзя —
+// локальное объявление интерфейса затеняло бы глобальный полный тип.
 declare global {
   interface Window {
     showDirectoryPicker?: (options?: {
       mode?: 'read' | 'readwrite'
     }) => Promise<FileSystemDirectoryHandle>
   }
-}
-
-// Расширяем встроенный интерфейс, чтобы был доступ к values()
-interface FileSystemDirectoryHandle {
-  values(): AsyncIterableIterator<FileSystemDirectoryHandle | FileSystemFileHandle>
 }
 
 export class BrowserFileSystem implements FileSystemProvider {
@@ -47,7 +44,7 @@ export class BrowserFileSystem implements FileSystemProvider {
 
   async writeFile(path: string, content: string): Promise<void> {
     const handle = await this.resolveFile(path, /* create */ true)
-    const writable = await (handle as any).createWritable()
+    const writable = await handle.createWritable()
     await writable.write(content)
     await writable.close()
   }
@@ -62,14 +59,16 @@ export class BrowserFileSystem implements FileSystemProvider {
     const children: FileEntry[] = []
   
     for await (const entry of dir.values()) {
-      const kind = entry.kind === 'directory' ? 'dir' : 'file'
-  
+      const kind: 'file' | 'dir' = entry.kind === 'directory' ? 'dir' : 'file'
+
       // ── фильтр ─────────────────────────────
       if (shouldIgnore(entry.name, kind)) continue
-  
+
       const path = prefix ? `${prefix}/${entry.name}` : entry.name
-  
-      if (kind === 'dir') {
+
+      // сужение по дискриминанту entry.kind,
+      // чтобы TS видел точный тип в каждой ветке
+      if (entry.kind === 'directory') {
         children.push(await this.readDir(entry, path, entry.name))
       } else {
         children.push({
