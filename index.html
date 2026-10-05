@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web Editor</title>
+  </head>
+  <body>
+    <div id="app">
+      <!-- Левая панель -->
+      <aside id="sidebar">
+        <div class="sidebar-toolbar">
+          <button id="btn-open-folder" title="Открыть папку проекта">Открыть папку</button>
+        </div>
+        <div class="sidebar-tabs">
+          <button data-mode="files" class="active">Files</button>
+          <button data-mode="toc">TOC</button>
+        </div>
+        <div id="toc-filter" class="toc-filter" hidden>
+          <input type="text" id="toc-filter-input" placeholder="Фильтр символов..." />
+        </div>
+        <div id="file-tree" class="sidebar-body"></div>
+        <div id="toc-list" class="sidebar-body" hidden></div>
+      </aside>
+      
+      <!-- Правая часть -->
+      <main id="main">
+        <div id="tab-bar"></div>
+        <div id="editor-container"></div>
+      </main>
+      
+      <!-- Статусбар -->
+      <footer id="status-bar">
+        <span id="status-msg"></span>
+        <span id="cursor-pos"></span>
+      </footer>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
