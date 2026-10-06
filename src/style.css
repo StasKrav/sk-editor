@@ -525,4 +525,10 @@ body {
   border-color: var(--accent);
 }
 
-
+.tree-row[data-kind='dir'] .tree-name {
+  color: var(--accent);
+  font-weight: 600;
+}
+.tree-row[data-kind='file'] .tree-name {
+  color: var(--text-secondary);
+}
