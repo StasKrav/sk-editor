@@ -532,3 +532,28 @@ body {
 .tree-row[data-kind='file'] .tree-name {
   color: var(--text-secondary);
 }
+
+#file-tree:focus {
+  outline: none;
+}
+
+#file-tree.focused .tree-row.selected {
+  background: var(--bg-selection);
+  color: var(--text-inverse);
+  /* лёгкая обводка, чтобы было видно — тут клавиатура */
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/* TOC — фокус и выделение */
+#toc-list:focus {
+  outline: none;
+}
+
+.toc-row.selected {
+  background: var(--bg-selection);
+  color: var(--text-inverse);
+}
+
+#toc-list.focused .toc-row.selected {
+  box-shadow: inset 2px 0 0 var(--accent);
+}

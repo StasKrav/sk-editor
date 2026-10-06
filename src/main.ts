@@ -150,18 +150,7 @@ tocFilterInput.addEventListener('input', () => {
 sidebarTabBtns.forEach(btn => {
   btn.addEventListener('click', () => {
     const mode = btn.dataset.mode as 'files' | 'toc'
-    sidebarTabBtns.forEach(b => b.classList.toggle('active', b === btn))
-
-    if (mode === 'files') {
-      fileTreeEl.hidden = false
-      tocFilterEl.hidden = true
-      tocListEl.hidden = true
-    } else {
-      fileTreeEl.hidden = true
-      tocFilterEl.hidden = false
-      tocListEl.hidden = false
-      updateToc()
-    }
+    activateSidebarTab(mode)
   })
 })
 
@@ -382,7 +371,44 @@ window.addEventListener('keydown', async e => {
     e.preventDefault()
     createNewFolder()
     return
-  }	
+  }
+
+  // Alt+1 — тумблер: дерево ↔ редактор
+  if (e.altKey && !ctrl && e.key === '1') {
+    e.preventDefault()
+    activateSidebarTab('files')
+  
+    if (tree.hasFocus()) {
+      // уже в дереве — вернуть в редактор
+      editor.focus()
+      setStatus('Фокус: редактор')
+    } else {
+      tree.focusFirst()
+      setStatus('Фокус: файлы')
+    }
+    return
+  }
+  
+  // Alt+2 — тумблер: TOC ↔ редактор
+  if (e.altKey && !ctrl && e.key === '2') {
+    e.preventDefault()
+    activateSidebarTab('toc')
+  
+    if (toc.hasFocus()) {
+      editor.focus()
+      setStatus('Фокус: редактор')
+    } else {
+      toc.focusFirst()
+      setStatus('Фокус: оглавление')
+    }
+    return
+  }
+
+  if (e.key === 'Escape' && document.activeElement === fileTreeEl) {
+    e.preventDefault()
+    editor.focus()
+    return
+  }
 
 })
 
@@ -461,5 +487,20 @@ resizer.addEventListener('dblclick', () => {
   setSidebarWidth(260)
 })
 
-;(window as any).fs = fs
-;(window as any).tree = tree
+function activateSidebarTab(mode: 'files' | 'toc') {
+  // обновляем кнопки
+  sidebarTabBtns.forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode)
+  })
+
+  if (mode === 'files') {
+    fileTreeEl.hidden = false
+    tocFilterEl.hidden = true
+    tocListEl.hidden = true
+  } else {
+    fileTreeEl.hidden = true
+    tocFilterEl.hidden = false
+    tocListEl.hidden = false
+    updateToc()
+  }
+}
