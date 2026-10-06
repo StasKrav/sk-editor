@@ -115,7 +115,7 @@ body {
 
 #app {
   display: grid;
-  grid-template-columns: var(--sidebar-width, 260px) 1px 1fr;
+  grid-template-columns: var(--sidebar-width, 420px) 1px 1fr;
   grid-template-rows: 1fr 24px;
   grid-template-areas:
     'sidebar resizer main'
