@@ -9,6 +9,7 @@ export interface Tab {
   language: LangKind
   state: EditorState
   modified: boolean
+  fileHandle?: FileSystemFileHandle 
 }
 
 export interface TabChangeEvent {
@@ -74,6 +75,34 @@ export class TabManager {
     })
     this.activate(id)
     return id
+  }
+
+  openWithHandle(
+    filename: string,
+    content: string,
+    handle: FileSystemFileHandle,
+  ): string {
+    const existing = this.tabs.find(t => t.filename === filename)
+    if (existing) {
+      // файл уже открыт — обновляем handle и активируем
+      existing.fileHandle = handle
+      this.activate(existing.id)
+      return existing.id
+    }
+  
+    const language = langFromFilename(filename)
+    const state = this.editor.createState(content, language)
+    const tab: Tab = {
+      id: `tab-${this.nextId++}`,
+      filename,
+      language,
+      state,
+      modified: false,
+      fileHandle: handle,
+    }
+    this.tabs.push(tab)
+    this.activate(tab.id)
+    return tab.id
   }
 
   activate(id: string) {

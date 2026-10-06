@@ -21,6 +21,7 @@ const tocListEl        = document.getElementById('toc-list')!
 const tocFilterEl      = document.getElementById('toc-filter')!
 const tocFilterInput   = document.getElementById('toc-filter-input') as HTMLInputElement
 const btnOpenFolder    = document.getElementById('btn-open-folder')!
+const btnOpenFile = document.getElementById('btn-open-file')!
 const sidebarTabBtns   = document.querySelectorAll<HTMLButtonElement>('.sidebar-tabs button')
 
 // ── 2. Статусбар ────────────────────────────
@@ -176,28 +177,21 @@ async function saveActiveTab() {
   tabs.persistActive()
   const content = editor.view.state.doc.toString()
 
-  // Новый Untitled — спрашиваем имя через системный диалог
+  // Если у вкладки нет имени — это новый Untitled, идём в «Сохранить как»
   if (!tab.filename || tab.filename.startsWith('Untitled')) {
-    try {
-      const handle = await fs.saveAs(content)
-      if (!handle) {
-        setStatus('Сохранение отменено')
-        return
-      }
-      tab.filename = handle.name
-      tab.language = langFromFilename(handle.name)
-      tab.modified = false
-      tabBar.render({ tabs: tabs.getTabs(), activeId: tabs.getActiveId() })
-      setStatus(`Сохранено: ${handle.name}`)
-    } catch (err) {
-      setStatus(`Ошибка сохранения: ${(err as Error).message}`)
-    }
+    await saveActiveTabAs()
     return
   }
 
-  // Существующий файл — молча
   try {
-    await fs.writeFile(tab.filename, content)
+    if (tab.fileHandle) {
+      // Файл открыт через showOpenFilePicker — пишем через его handle
+      await fs.writeViaHandle(tab.fileHandle, content)
+    } else {
+      // Файл из дерева проекта — пишем через путь
+      await fs.writeFile(tab.filename, content)
+    }
+
     tab.modified = false
     tabBar.render({ tabs: tabs.getTabs(), activeId: tabs.getActiveId() })
     setStatus(`Сохранено: ${tab.filename}`)
@@ -224,6 +218,7 @@ async function saveActiveTabAs() {
     }
     tab.filename = handle.name
     tab.language = langFromFilename(handle.name)
+    tab.fileHandle = handle          // ← запоминаем handle
     tab.modified = false
     tabBar.render({ tabs: tabs.getTabs(), activeId: tabs.getActiveId() })
     setStatus(`Сохранено как: ${handle.name}`)
@@ -251,9 +246,41 @@ btnOpenFolder.addEventListener('click', async () => {
   }
 })
 
+// -- Кнопка "Открыть файл" ---
+
+btnOpenFile.addEventListener('click', async () => {
+  try {
+    const file = await fs.openFile()
+    if (!file) return
+
+    tabs.openWithHandle(file.name, file.content, file.handle)
+    setStatus(`Открыт: ${file.name}`)
+  } catch (err) {
+    setStatus(`Ошибка: ${(err as Error).message}`)
+  }
+})
+
 // ── 11. Горячие клавиши ─────────────────────
 window.addEventListener('keydown', async e => {
   const ctrl = e.ctrlKey || e.metaKey
+
+  // Ctrl+1..9 — переход на N-ю вкладку
+  if (ctrl && !e.shiftKey && !e.altKey && /^[1-9]$/.test(e.key)) {
+    e.preventDefault()
+    const idx = parseInt(e.key, 10) - 1
+    const list = tabs.getTabs()
+    if (idx < list.length) {
+      tabs.activate(list[idx].id)
+    }
+    return
+  }
+
+  if (ctrl && e.key === '0') {
+    e.preventDefault()
+    const list = tabs.getTabs()
+    if (list.length > 0) tabs.activate(list[list.length - 1].id)
+    return
+  }
 
   // Ctrl+Shift+F — форматировать активную вкладку
   if (ctrl && e.shiftKey && e.key === 'F') {
@@ -280,6 +307,13 @@ window.addEventListener('keydown', async e => {
   if (ctrl && e.key === 'o') {
     e.preventDefault()
     btnOpenFolder.click()
+    return
+  }
+
+  // Alt+O — открыть файл
+  if (e.altKey && !ctrl && e.key.toLowerCase() === 'o') {
+    e.preventDefault()
+    btnOpenFile.click()
     return
   }
 

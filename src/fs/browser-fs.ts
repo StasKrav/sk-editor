@@ -15,6 +15,11 @@ declare global {
       suggestedName?: string
       types?: { description?: string; accept: Record<string, string[]> }[]
     }) => Promise<FileSystemFileHandle>
+
+    showOpenFilePicker?: (options?: {
+      types?: { description?: string; accept: Record<string, string[]> }[]
+      multiple?: boolean
+    }) => Promise<FileSystemFileHandle[]>
   }
 }
 
@@ -34,6 +39,52 @@ export class BrowserFileSystem implements FileSystemProvider {
     this.rootName = handle.name
 
     return await this.readDir(handle, '', handle.name)
+  }
+
+  async openFile(): Promise<{
+    name: string
+    content: string
+    handle: FileSystemFileHandle
+  } | null> {
+    if (!window.showOpenFilePicker) {
+      throw new Error('File System Access API не поддерживается этим браузером')
+    }
+  
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        types: [
+          {
+            description: 'Код',
+            accept: {
+              'text/plain': ['.txt', '.md'],
+              'text/html': ['.html', '.htm'],
+              'text/css': ['.css'],
+              'text/javascript': ['.js', '.mjs', '.jsx'],
+              'text/typescript': ['.ts', '.tsx'],
+              'application/json': ['.json'],
+            },
+          },
+        ],
+        multiple: false,
+      })
+  
+      const file = await handle.getFile()
+      const content = await file.text()
+  
+      return { name: handle.name, content, handle }
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return null
+      throw err
+    }
+  }
+
+  async writeViaHandle(
+    handle: FileSystemFileHandle,
+    content: string,
+  ): Promise<void> {
+    const writable = await handle.createWritable()
+    await writable.write(content)
+    await writable.close()
   }
 
   async refresh(): Promise<FileEntry | null> {

@@ -263,6 +263,54 @@ body {
 }
 
 /* ─────────────────────────────────────────────
+   Тонкий скроллбар
+   ───────────────────────────────────────────── */
+
+/* Firefox */
+.cm-scroller,
+#file-tree,
+#toc-list,
+#tab-bar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-subtle) transparent;
+}
+
+/* Chromium / WebKit */
+.cm-scroller::-webkit-scrollbar,
+#file-tree::-webkit-scrollbar,
+#toc-list::-webkit-scrollbar,
+#tab-bar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.cm-scroller::-webkit-scrollbar-track,
+#file-tree::-webkit-scrollbar-track,
+#toc-list::-webkit-scrollbar-track,
+#tab-bar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cm-scroller::-webkit-scrollbar-thumb,
+#file-tree::-webkit-scrollbar-thumb,
+#toc-list::-webkit-scrollbar-thumb,
+#tab-bar::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 4px;
+}
+
+.cm-scroller::-webkit-scrollbar-thumb:hover,
+#file-tree::-webkit-scrollbar-thumb:hover,
+#toc-list::-webkit-scrollbar-thumb:hover,
+#tab-bar::-webkit-scrollbar-thumb:hover {
+  background: var(--text-dim);
+}
+
+.cm-scroller::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ─────────────────────────────────────────────
    Statusbar
    ───────────────────────────────────────────── */
 
