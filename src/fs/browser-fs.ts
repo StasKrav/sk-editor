@@ -10,6 +10,11 @@ declare global {
     showDirectoryPicker?: (options?: {
       mode?: 'read' | 'readwrite'
     }) => Promise<FileSystemDirectoryHandle>
+
+    showSaveFilePicker?: (options?: {
+      suggestedName?: string
+      types?: { description?: string; accept: Record<string, string[]> }[]
+    }) => Promise<FileSystemFileHandle>
   }
 }
 
@@ -107,5 +112,33 @@ export class BrowserFileSystem implements FileSystemProvider {
     }
 
     return await dir.getFileHandle(fileName, { create })
+  }
+
+  async saveAs(
+    content: string,
+    suggestedName = 'untitled.txt',
+  ): Promise<FileSystemFileHandle | null> {
+    if (!window.showSaveFilePicker) {
+      throw new Error('File System Access API не поддерживается')
+    }
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName,
+        types: [
+          { description: 'Text', accept: { 'text/plain': ['.txt', '.md'] } },
+          { description: 'HTML', accept: { 'text/html': ['.html', '.htm'] } },
+          { description: 'CSS',  accept: { 'text/css': ['.css'] } },
+          { description: 'JavaScript', accept: { 'text/javascript': ['.js', '.mjs'] } },
+          { description: 'TypeScript', accept: { 'text/typescript': ['.ts', '.tsx'] } },
+        ],
+      })
+      const writable = await handle.createWritable()
+      await writable.write(content)
+      await writable.close()
+      return handle
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return null
+      throw err
+    }
   }
 }

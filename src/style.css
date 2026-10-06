@@ -35,6 +35,7 @@
   --cm-active-line:      rgba(255, 255, 255, 0.06);
   --cm-active-gutter:    rgba(255, 255, 255, 0.08);
   --cm-selection:        #5f7f9f;    /* сине-серый, отличим от фона */
+  --cm-cursor:           #ffffff;
 
   /* TOC */
   --toc-function:        #f0dfaf;
@@ -80,6 +81,7 @@
   --cm-active-line:      rgba(0, 0, 0, 0.04);
   --cm-active-gutter:    rgba(0, 0, 0, 0.06);
   --cm-selection:        #cfe3f0;
+  --cm-cursor:           #000000;
 
   --toc-function:        #b58900;
   --toc-class:           #268bd2;
@@ -254,6 +256,10 @@ body {
 .cm-editor {
   height: 100%;
   font-size: 13px;
+}
+
+.cm-editor .cm-content {
+  caret-color: var(--cm-cursor);
 }
 
 /* ─────────────────────────────────────────────
@@ -470,6 +476,5 @@ body {
 .toc-filter input:focus {
   border-color: var(--accent);
 }
-
 
 

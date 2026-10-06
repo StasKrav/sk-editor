@@ -30,7 +30,7 @@ const editorTheme = EditorView.theme({
     overflow: 'auto',
   },
   '.cm-gutters': {
-    backgroundColor: 'var(--cm-gutter-bg)',
+    backgroundColor: 'var(--cm-bg)',
     color: 'var(--text-muted)',
     borderRight: '1px solid var(--border)',
     minWidth: '3.5em',
@@ -47,7 +47,7 @@ const editorTheme = EditorView.theme({
     backgroundColor: 'var(--cm-selection)',
   },
   '.cm-cursor': {
-    borderLeftColor: 'var(--text-primary)',
+    borderLeftColor: 'var(--cm-cursor)',
   },
 })
 

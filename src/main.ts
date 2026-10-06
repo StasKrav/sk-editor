@@ -9,6 +9,7 @@ import { TocView } from './toc/toc-view'
 import type { FileEntry } from './fs/types'
 import type { TocSymbol } from './toc/types'
 import { formatCode } from './format/prettier'
+import { langFromFilename } from './editor/languages'
 
 // ── 1. DOM-элементы ─────────────────────────
 const editorContainer = document.getElementById('editor-container')!
@@ -165,6 +166,72 @@ async function formatActiveTab() {
   setStatus('Отформатировано')
 }
 
+async function saveActiveTab() {
+  const tab = tabs.getActive()
+  if (!tab) {
+    setStatus('Нет активной вкладки')
+    return
+  }
+
+  tabs.persistActive()
+  const content = editor.view.state.doc.toString()
+
+  // Новый Untitled — спрашиваем имя через системный диалог
+  if (!tab.filename || tab.filename.startsWith('Untitled')) {
+    try {
+      const handle = await fs.saveAs(content)
+      if (!handle) {
+        setStatus('Сохранение отменено')
+        return
+      }
+      tab.filename = handle.name
+      tab.language = langFromFilename(handle.name)
+      tab.modified = false
+      tabBar.render({ tabs: tabs.getTabs(), activeId: tabs.getActiveId() })
+      setStatus(`Сохранено: ${handle.name}`)
+    } catch (err) {
+      setStatus(`Ошибка сохранения: ${(err as Error).message}`)
+    }
+    return
+  }
+
+  // Существующий файл — молча
+  try {
+    await fs.writeFile(tab.filename, content)
+    tab.modified = false
+    tabBar.render({ tabs: tabs.getTabs(), activeId: tabs.getActiveId() })
+    setStatus(`Сохранено: ${tab.filename}`)
+  } catch (err) {
+    setStatus(`Ошибка сохранения: ${(err as Error).message}`)
+  }
+}
+
+async function saveActiveTabAs() {
+  const tab = tabs.getActive()
+  if (!tab) {
+    setStatus('Нет активной вкладки')
+    return
+  }
+
+  tabs.persistActive()
+  const content = editor.view.state.doc.toString()
+
+  try {
+    const handle = await fs.saveAs(content, tab.filename)
+    if (!handle) {
+      setStatus('Сохранение отменено')
+      return
+    }
+    tab.filename = handle.name
+    tab.language = langFromFilename(handle.name)
+    tab.modified = false
+    tabBar.render({ tabs: tabs.getTabs(), activeId: tabs.getActiveId() })
+    setStatus(`Сохранено как: ${handle.name}`)
+  } catch (err) {
+    setStatus(`Ошибка сохранения: ${(err as Error).message}`)
+  }
+}
+
 // ── 9. Реакция на смену вкладок ─────────────
 tabs.onChange(e => {
   tabBar.render(e)
@@ -198,25 +265,14 @@ window.addEventListener('keydown', async e => {
   // Ctrl+S — сохранить активную вкладку
   if (ctrl && e.key === 's') {
     e.preventDefault()
-    const tab = tabs.getActive()
-    if (!tab) return
+    await saveActiveTab()
+    return
+  }
 
-    if (!tab.filename || tab.filename.startsWith('Untitled')) {
-      setStatus('Save As пока не реализован')
-      return
-    }
-
-    try {
-      tabs.persistActive()
-      const content = editor.view.state.doc.toString()
-      await fs.writeFile(tab.filename, content)
-      tab.modified = false
-      // принудительно перерисуем панель вкладок, чтобы убрать «●»
-      tabBar.render({ tabs: tabs.getTabs(), activeId: tabs.getActiveId() })
-      setStatus(`Сохранено: ${tab.filename}`)
-    } catch (err) {
-      setStatus(`Ошибка сохранения: ${(err as Error).message}`)
-    }
+  // Ctrl+Shift+S — сохранить как
+  if (ctrl && e.shiftKey && e.key === 'S') {
+    e.preventDefault()
+    await saveActiveTabAs()
     return
   }
 
@@ -236,7 +292,7 @@ window.addEventListener('keydown', async e => {
   }
 
   // Ctrl+W — закрыть активную вкладку
-  if (ctrl && e.key === 'w') {
+  if (ctrl && e.key === 'q') {
     e.preventDefault()
     const id = tabs.getActiveId()
     if (id) tabs.close(id)

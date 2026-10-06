@@ -89,7 +89,7 @@ export class TreeView {
         }
       }
     } else {
-      const row = this.makeRow(node, depth, '📄')
+      const row = this.makeRow(node, depth, '')
       this.el.appendChild(row)
     }
   }
@@ -109,8 +109,16 @@ export class TreeView {
     const nameEl = document.createElement('span')
     nameEl.className = 'tree-name'
     nameEl.textContent = node.name
-
-    row.append(iconEl, nameEl)
+    
+    if (icon) {
+      const iconEl = document.createElement('span')
+      iconEl.className = 'tree-icon'
+      iconEl.textContent = icon
+      row.append(iconEl, nameEl)
+    } else {
+      row.append(nameEl)
+    }
+    
     return row
   }
 }
