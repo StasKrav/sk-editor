@@ -9,6 +9,7 @@ export class TreeView {
   private cb: TreeViewCallbacks
   private root: FileEntry | null = null
   private selectedPath: string | null = null
+  private selectedKind: 'file' | 'dir' | null = null
 
   constructor(el: HTMLElement, cb: TreeViewCallbacks) {
     this.el = el
@@ -23,6 +24,7 @@ export class TreeView {
       const kind = row.dataset.kind as 'file' | 'dir'
 
       this.selectedPath = path
+      this.selectedKind = kind 
       this.render()
 
       if (kind === 'file') {
@@ -43,6 +45,14 @@ export class TreeView {
     this.root = root
     this.selectedPath = null
     this.render()
+  }
+
+  getSelectedPath(): string | null {
+    return this.selectedPath
+  }
+  
+  getSelectedKind(): 'file' | 'dir' | null {
+    return this.selectedKind
   }
 
   private findEntry(node: FileEntry | null, path: string): FileEntry | null {

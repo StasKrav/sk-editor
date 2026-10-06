@@ -24,6 +24,41 @@ const btnOpenFolder    = document.getElementById('btn-open-folder')!
 const btnOpenFile = document.getElementById('btn-open-file')!
 const sidebarTabBtns   = document.querySelectorAll<HTMLButtonElement>('.sidebar-tabs button')
 
+async function createNewFile() {
+  // если выделена папка — предлагаем создать файл внутри неё
+  const selectedPath = tree.getSelectedPath()
+  const selectedKind = tree.getSelectedKind()
+  const base = (selectedKind === 'dir' && selectedPath) ? selectedPath + '/' : ''
+
+  const path = prompt('Имя файла (можно с путём):', base)
+  if (!path) return
+
+  try {
+    await fs.createFile(path)
+    const root = await fs.refresh()
+    if (root) tree.setRoot(root)
+    const content = await fs.readFile(path)
+    tabs.open(path, content)
+    setStatus(`Создан: ${path}`)
+  } catch (err) {
+    setStatus(`Ошибка: ${(err as Error).message}`)
+  }
+}
+
+async function createNewFolder() {
+  const path = prompt('Имя папки (можно с вложенностью, например src/utils):')
+  if (!path) return
+
+  try {
+    await fs.createFolder(path)
+    const root = await fs.refresh()
+    if (root) tree.setRoot(root)
+    setStatus(`Создана папка: ${path}`)
+  } catch (err) {
+    setStatus(`Ошибка: ${(err as Error).message}`)
+  }
+}
+
 // ── 2. Статусбар ────────────────────────────
 function setStatus(msg: string) {
   statusMsgEl.textContent = msg
@@ -260,6 +295,23 @@ btnOpenFile.addEventListener('click', async () => {
   }
 })
 
+// === Refresh ===
+const btnRefreshTree = document.getElementById('btn-refresh-tree')!
+
+btnRefreshTree.addEventListener('click', async () => {
+  try {
+    const root = await fs.refresh()
+    if (!root) {
+      setStatus('Папка проекта не открыта')
+      return
+    }
+    tree.setRoot(root)
+    setStatus('Дерево обновлено')
+  } catch (err) {
+    setStatus(`Ошибка: ${(err as Error).message}`)
+  }
+})
+
 // ── 11. Горячие клавиши ─────────────────────
 window.addEventListener('keydown', async e => {
   const ctrl = e.ctrlKey || e.metaKey
@@ -317,21 +369,21 @@ window.addEventListener('keydown', async e => {
     return
   }
 
-  // Ctrl+N — новая пустая вкладка
-  if (ctrl && e.key === 'n') {
+  // Alt+N — новый файл
+  if (e.altKey && !ctrl && e.key.toLowerCase() === 'n') {
+    console.log('Alt+N triggered, selectedPath =', tree.getSelectedPath())
     e.preventDefault()
-    tabs.openUntitled()
-    setStatus('Новая вкладка')
+    createNewFile()
     return
   }
+  
+  // Alt+M — новая папка
+  if (e.altKey && !ctrl && e.key.toLowerCase() === 'm') {
+    e.preventDefault()
+    createNewFolder()
+    return
+  }	
 
-  // Ctrl+W — закрыть активную вкладку
-  if (ctrl && e.key === 'q') {
-    e.preventDefault()
-    const id = tabs.getActiveId()
-    if (id) tabs.close(id)
-    return
-  }
 })
 
 // ── 12. Стартовое состояние ─────────────────
@@ -408,3 +460,6 @@ window.addEventListener('mouseup', () => {
 resizer.addEventListener('dblclick', () => {
   setSidebarWidth(260)
 })
+
+;(window as any).fs = fs
+;(window as any).tree = tree

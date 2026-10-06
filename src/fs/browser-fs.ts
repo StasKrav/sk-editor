@@ -105,6 +105,34 @@ export class BrowserFileSystem implements FileSystemProvider {
     await writable.close()
   }
 
+  async createFile(path: string): Promise<void> {
+    if (!this.rootHandle) throw new Error('Проект не открыт')
+  
+    const parts = path.split('/').filter(Boolean)
+    const fileName = parts.pop()
+    if (!fileName) throw new Error('Пустое имя файла')
+  
+    let dir: FileSystemDirectoryHandle = this.rootHandle
+    for (const part of parts) {
+      dir = await dir.getDirectoryHandle(part, { create: true })
+    }
+  
+    // create: true не перезапишет существующий
+    await dir.getFileHandle(fileName, { create: true })
+  }
+  
+  async createFolder(path: string): Promise<void> {
+    if (!this.rootHandle) throw new Error('Проект не открыт')
+  
+    const parts = path.split('/').filter(Boolean)
+    if (parts.length === 0) throw new Error('Пустое имя папки')
+  
+    let dir: FileSystemDirectoryHandle = this.rootHandle
+    for (const part of parts) {
+      dir = await dir.getDirectoryHandle(part, { create: true })
+    }
+  }
+
   // ── внутренние помощники ─────────────────────
 
   private async readDir(
