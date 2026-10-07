@@ -104,7 +104,6 @@ const tree = new TreeView(fileTreeEl, {
   },
 
   async onDeleteRequest(entry: FileEntry) {
-      const kind = entry.kind === 'dir' ? 'папку' : 'файл'
       const msg = entry.kind === 'dir'
         ? `Удалить папку «${entry.name}» со всем содержимым?`
         : `Удалить файл «${entry.name}»?`
