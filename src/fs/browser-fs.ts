@@ -133,6 +133,148 @@ export class BrowserFileSystem implements FileSystemProvider {
     }
   }
 
+  async renameEntry(oldPath: string, newPath: string): Promise<void> {
+    if (!this.rootHandle) throw new Error('Проект не открыт')
+  
+    // находим исходный handle
+    const srcParts = oldPath.split('/').filter(Boolean)
+    const srcName = srcParts.pop()!
+    let srcDir: FileSystemDirectoryHandle = this.rootHandle
+    for (const part of srcParts) {
+      srcDir = await srcDir.getDirectoryHandle(part)
+    }
+  
+    // определяем, папка это или файл
+    const srcDirHandle = await srcDir.getDirectoryHandle(srcName).catch(() => null)
+    const srcFileHandle = srcDirHandle
+      ? null
+      : await srcDir.getFileHandle(srcName)
+  
+    if (srcDirHandle) {
+      // это папка — рекурсивно копируем содержимое
+      await this.copyDirRecursive(srcDirHandle, newPath)
+      await srcDir.removeEntry(srcName, { recursive: true })
+    } else if (srcFileHandle) {
+      // это файл
+      const file = await srcFileHandle.getFile()
+      const content = await file.text()
+      await this.createFile(newPath)
+      await this.writeFile(newPath, content)
+      await srcDir.removeEntry(srcName)
+    } else {
+      throw new Error('Файл или папка не найдены')
+    }
+  }
+
+  async copyEntry(srcPath: string, destPath: string): Promise<void> {
+    if (!this.rootHandle) throw new Error('Проект не открыт')
+  
+    const srcParts = srcPath.split('/').filter(Boolean)
+    const srcName = srcParts.pop()!
+    let srcDir: FileSystemDirectoryHandle = this.rootHandle
+    for (const part of srcParts) {
+      srcDir = await srcDir.getDirectoryHandle(part)
+    }
+  
+    const srcDirHandle = await srcDir.getDirectoryHandle(srcName).catch(() => null)
+  
+    if (srcDirHandle) {
+      // папка
+      await this.copyDirRecursive(srcDirHandle, destPath)
+    } else {
+      // файл
+      const srcFileHandle = await srcDir.getFileHandle(srcName)
+      const file = await srcFileHandle.getFile()
+      const content = await file.text()
+      await this.createFile(destPath)
+      await this.writeFile(destPath, content)
+    }
+  }
+
+  async duplicateEntry(path: string): Promise<string> {
+    const parts = path.split('/').filter(Boolean)
+    const name = parts.pop()!
+    const parentPath = parts.join('/')
+  
+    const dotIdx = name.lastIndexOf('.')
+    const baseName = dotIdx > 0 ? name.slice(0, dotIdx) : name
+    const ext = dotIdx > 0 ? name.slice(dotIdx) : ''
+  
+    let copyName = `${baseName} copy${ext}`
+    let n = 2
+    while (await this.exists(parentPath ? `${parentPath}/${copyName}` : copyName)) {
+      copyName = `${baseName} copy ${n}${ext}`
+      n++
+    }
+  
+    const newPath = parentPath ? `${parentPath}/${copyName}` : copyName
+    await this.copyEntry(path, newPath)
+    return newPath
+  }
+
+  async exists(path: string): Promise<boolean> {
+    try {
+      if (!this.rootHandle) return false
+      const parts = path.split('/').filter(Boolean)
+      const name = parts.pop()!
+      let dir: FileSystemDirectoryHandle = this.rootHandle
+      for (const part of parts) {
+        dir = await dir.getDirectoryHandle(part)
+      }
+      // пробуем как файл
+      await dir.getFileHandle(name)
+      return true
+    } catch {
+      try {
+        // пробуем как папку
+        const parts = path.split('/').filter(Boolean)
+        const name = parts.pop()!
+        let dir: FileSystemDirectoryHandle = this.rootHandle!
+        for (const part of parts) {
+          dir = await dir.getDirectoryHandle(part)
+        }
+        await dir.getDirectoryHandle(name)
+        return true
+      } catch {
+        return false
+      }
+    }
+  }
+  
+  private async copyDirRecursive(
+    srcDir: FileSystemDirectoryHandle,
+    destPath: string,
+  ): Promise<void> {
+    await this.createFolder(destPath)
+  
+    for await (const entry of srcDir.values()) {
+      const childPath = `${destPath}/${entry.name}`
+      if (entry.kind === 'directory') {
+        await this.copyDirRecursive(entry, childPath)
+      } else {
+        const file = await entry.getFile()
+        const content = await file.text()
+        await this.createFile(childPath)
+        await this.writeFile(childPath, content)
+      }
+    }
+  }
+
+  async deleteEntry(path: string): Promise<void> {
+    if (!this.rootHandle) throw new Error('Проект не открыт')
+  
+    const parts = path.split('/').filter(Boolean)
+    const name = parts.pop()
+    if (!name) throw new Error('Пустое имя')
+  
+    let dir: FileSystemDirectoryHandle = this.rootHandle
+    for (const part of parts) {
+      dir = await dir.getDirectoryHandle(part)
+    }
+  
+    await dir.removeEntry(name, { recursive: true })
+  }
+
   // ── внутренние помощники ─────────────────────
 
   private async readDir(

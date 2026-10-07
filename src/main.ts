@@ -102,7 +102,79 @@ const tree = new TreeView(fileTreeEl, {
       setStatus(`Ошибка: ${(err as Error).message}`)
     }
   },
+
+  async onDeleteRequest(entry: FileEntry) {
+      const kind = entry.kind === 'dir' ? 'папку' : 'файл'
+      const msg = entry.kind === 'dir'
+        ? `Удалить папку «${entry.name}» со всем содержимым?`
+        : `Удалить файл «${entry.name}»?`
+      if (!confirm(msg)) return
+  
+      try {
+        await fs.deleteEntry(entry.path)
+  
+        // если файл был открыт во вкладках — закрываем
+        const tab = tabs.getTabs().find(t => t.filename === entry.path)
+        if (tab) tabs.close(tab.id)
+  
+        // обновляем дерево
+        const root = await fs.refresh()
+        if (root) tree.setRoot(root)
+  
+        setStatus(`Удалено: ${entry.path}`)
+      } catch (err) {
+        setStatus(`Ошибка удаления: ${(err as Error).message}`)
+      }
+    },
+
+  async onRenameRequest(entry: FileEntry) {
+    const newName = prompt('Новое имя:', entry.name)
+    if (!newName || newName === entry.name) return
+  
+    // запрещаем слэши — только имя, без перемещения
+    if (newName.includes('/')) {
+      setStatus('Переименование не перемещает — используйте только имя файла')
+      return
+    }
+  
+    // вычисляем новый путь: та же папка, новое имя
+    const parentPath = entry.path.includes('/')
+      ? entry.path.slice(0, entry.path.lastIndexOf('/'))
+      : ''
+    const newPath = parentPath ? `${parentPath}/${newName}` : newName
+  
+    try {
+      await fs.renameEntry(entry.path, newPath)
+  
+      // если файл открыт — обновляем путь в вкладке
+      const tab = tabs.getTabs().find(t => t.filename === entry.path)
+      if (tab) {
+        tab.filename = newPath
+        tab.language = langFromFilename(newPath)
+        tabBar.render({ tabs: tabs.getTabs(), activeId: tabs.getActiveId() })
+      }
+  
+      const root = await fs.refresh()
+      if (root) tree.setRoot(root)
+  
+      setStatus(`Переименовано: ${entry.path} → ${newPath}`)
+    } catch (err) {
+      setStatus(`Ошибка переименования: ${(err as Error).message}`)
+    }
+  },
+
+  async onDuplicateRequest(entry: FileEntry) {
+    try {
+      const newPath = await fs.duplicateEntry(entry.path)
+      const root = await fs.refresh()
+      if (root) tree.setRoot(root)
+      setStatus(`Создана копия: ${newPath}`)
+    } catch (err) {
+      setStatus(`Ошибка копирования: ${(err as Error).message}`)
+    }
+  },
 })
+
 
 // ── 7. TOC ──────────────────────────────────
 const toc = new TocView(tocListEl, {
