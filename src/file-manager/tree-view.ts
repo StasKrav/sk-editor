@@ -53,17 +53,20 @@ export class TreeView {
 
     this.el.addEventListener('keydown', e => {
       if (!this.focused) return
+    
+      const flat = this.flatten()
+      if (flat.length === 0) return
+      const idx = flat.findIndex(n => n.path === this.selectedPath)
+    
       const ctrl = e.ctrlKey || e.metaKey
     
       if (ctrl && e.key === 'd') {
         e.preventDefault()
-        const flat = this.flatten()
-        const idx = flat.findIndex(n => n.path === this.selectedPath)
         if (idx < 0) return
         this.cb.onDuplicateRequest?.(flat[idx])
         return
       }
-
+    
       switch (e.key) {
         case 'ArrowDown': {
           e.preventDefault()
@@ -95,15 +98,13 @@ export class TreeView {
         case 'Delete': {
           e.preventDefault()
           if (idx < 0) return
-          const node = flat[idx]
-          this.cb.onDeleteRequest?.(node)
+          this.cb.onDeleteRequest?.(flat[idx])
           break
         }
         case 'F2': {
           e.preventDefault()
           if (idx < 0) return
-          const node = flat[idx]
-          this.cb.onRenameRequest?.(node)
+          this.cb.onRenameRequest?.(flat[idx])
           break
         }
       }
