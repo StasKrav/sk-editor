@@ -35,13 +35,30 @@
       
       <!-- Статусбар -->
       <footer id="status-bar">
-        <span id="status-msg">Готово</span>
-        <div class="status-right">
-          <span id="cursor-pos">1:1</span>
-          <select id="theme-select" title="Тема">
-            <option value="zenburn">Zenburn</option>
-            <option value="light">Solarized Light</option>
-          </select>
+        <!-- Обычный вид (виден, когда поиск закрыт) -->
+        <div id="status-normal">
+          <span id="status-msg">Готово</span>
+          <div class="status-right">
+            <span id="cursor-pos">1:1</span>
+            <select id="theme-select" title="Тема">
+              <option value="zenburn">Zenburn</option>
+              <option value="light">Solarized Light</option>
+            </select>
+          </div>
+        </div>
+      
+        <!-- Поиск (виден, когда поиск открыт) -->
+        <div id="search-panel" hidden>
+          <input type="text" id="search-input" placeholder="Найти..." />
+          <input type="text" id="replace-input" placeholder="Заменить..." />
+          <button id="search-prev" title="Предыдущее (Shift+Enter)">↑</button>
+          <button id="search-next" title="Следующее (Enter)">↓</button>
+          <button id="search-replace" title="Заменить">Заменить</button>
+          <button id="search-replace-all" title="Заменить все">Все</button>
+          <label class="search-case" title="Учитывать регистр">
+            <input type="checkbox" id="search-case-sensitive" /> Aa
+          </label>
+          <button id="search-close" title="Закрыть (Esc)">×</button>
         </div>
       </footer>
     </div>

@@ -1,7 +1,7 @@
 import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
-import { searchKeymap, highlightSelectionMatches } from '@codemirror/search'
 import { bracketMatching, indentOnInput, foldGutter, syntaxHighlighting } from '@codemirror/language'
+import { search, highlightSelectionMatches } from '@codemirror/search'
 import { Compartment, EditorState } from '@codemirror/state'
 import { langExtension, type LangKind } from './languages'
 import { zenburnHighlight, solarizedLightHighlight } from './cm-highlight'
@@ -49,6 +49,10 @@ const editorTheme = EditorView.theme({
   '.cm-cursor': {
     borderLeftColor: 'var(--cm-cursor)',
   },
+  // Скрываем контейнер панелей CM — панель поиска у нас в статусбаре
+  '.cm-panels': {
+    display: 'none',
+  },
 })
 
 export function baseExtensions(cb: EditorCallbacks, theme: EditorTheme = 'dark') {
@@ -60,12 +64,18 @@ export function baseExtensions(cb: EditorCallbacks, theme: EditorTheme = 'dark')
     bracketMatching(),
     indentOnInput(),
     highlightSelectionMatches(),
+    // Фиктивная панель: подсветка совпадений в @codemirror/search активна,
+    // только пока "открыта" панель поиска CM. Своя панель рисуется в статусбаре,
+    // поэтому вместо дефолтного UI CM передаём пустую панель
+    // (сам контейнер .cm-panels скрывается темой ниже).
+    search({
+      createPanel: () => ({ dom: document.createElement('div') }),
+    }),
     history(),
     keymap.of([
       indentWithTab,
       ...defaultKeymap,
       ...historyKeymap,
-      ...searchKeymap,
     ]),
     editorTheme,
     highlightConf.of(syntaxHighlighting(style)),

@@ -395,35 +395,36 @@ window.addEventListener('keydown', async e => {
   }
 
   // Ctrl+Shift+F — форматировать активную вкладку
-  if (ctrl && e.shiftKey && e.key === 'F') {
+  // e.code вместо e.key — чтобы хоткеи работали на любой раскладке (рус. и т.д.)
+  if (ctrl && e.shiftKey && e.code === 'KeyF') {
     e.preventDefault()
     formatActiveTab()
     return
   }
 
   // Ctrl+S — сохранить активную вкладку
-  if (ctrl && e.key === 's') {
+  if (ctrl && e.code === 'KeyS' && !e.shiftKey) {
     e.preventDefault()
     await saveActiveTab()
     return
   }
 
   // Ctrl+Shift+S — сохранить как
-  if (ctrl && e.shiftKey && e.key === 'S') {
+  if (ctrl && e.shiftKey && e.code === 'KeyS') {
     e.preventDefault()
     await saveActiveTabAs()
     return
   }
 
   // Ctrl+O — открыть папку
-  if (ctrl && e.key === 'o') {
+  if (ctrl && e.code === 'KeyO' && !e.shiftKey) {
     e.preventDefault()
     btnOpenFolder.click()
     return
   }
 
   // Alt+O — открыть файл
-  if (e.altKey && !ctrl && e.key.toLowerCase() === 'o') {
+  if (e.altKey && !ctrl && e.code === 'KeyO') {
     e.preventDefault()
     btnOpenFile.click()
     return
@@ -574,4 +575,136 @@ function activateSidebarTab(mode: 'files' | 'toc') {
     tocListEl.hidden = false
     updateToc()
   }
+}
+
+const statusBarEl = document.getElementById('status-bar')!
+
+// ── 15. Панель поиска ───────────────────────
+import {
+  SearchQuery,
+  setSearchQuery,
+  findNext,
+  findPrevious,
+  replaceNext,
+  replaceAll,
+  // CM-команды: выставляют внутренний флаг «панель открыта»,
+  // без которого @codemirror/search не подсвечивает совпадения
+  openSearchPanel as cmOpenSearchPanel,
+  closeSearchPanel as cmCloseSearchPanel,
+} from '@codemirror/search'
+
+const searchPanelEl   = document.getElementById('search-panel')!
+const searchInput     = document.getElementById('search-input') as HTMLInputElement
+const replaceInput    = document.getElementById('replace-input') as HTMLInputElement
+const searchNextBtn   = document.getElementById('search-next')!
+const searchPrevBtn   = document.getElementById('search-prev')!
+const searchReplaceBtn = document.getElementById('search-replace')!
+const searchReplaceAllBtn = document.getElementById('search-replace-all')!
+const searchCloseBtn  = document.getElementById('search-close')!
+const searchCaseChk   = document.getElementById('search-case-sensitive') as HTMLInputElement
+
+function applySearchQuery() {
+  const query = searchInput.value
+  const caseSensitive = searchCaseChk.checked
+
+  editor.view.dispatch({
+    effects: setSearchQuery.of(new SearchQuery({
+      search: query,
+      caseSensitive,
+      literal: true,
+    })),
+  })
+}
+
+function doFindNext() {
+  applySearchQuery()
+  findNext(editor.view)
+}
+
+function doFindPrev() {
+  applySearchQuery()
+  findPrevious(editor.view)
+}
+
+function doReplace() {
+  applySearchQuery()
+  replaceNext(editor.view)
+  findNext(editor.view)
+}
+
+function doReplaceAll() {
+  applySearchQuery()
+  replaceAll(editor.view)
+}
+
+searchNextBtn.addEventListener('click', doFindNext)
+searchPrevBtn.addEventListener('click', doFindPrev)
+searchReplaceBtn.addEventListener('click', doReplace)
+searchReplaceAllBtn.addEventListener('click', doReplaceAll)
+searchCloseBtn.addEventListener('click', closeSearchPanel)
+
+searchInput.addEventListener('input', applySearchQuery)
+searchCaseChk.addEventListener('change', applySearchQuery)
+
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault()
+    if (e.shiftKey) doFindPrev()
+    else doFindNext()
+  } else if (e.key === 'Escape') {
+    e.preventDefault()
+    closeSearchPanel()
+  }
+})
+
+replaceInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault()
+    doReplace()
+  } else if (e.key === 'Escape') {
+    e.preventDefault()
+    closeSearchPanel()
+  }
+})
+
+// Ctrl+F — открыть поиск
+window.addEventListener('keydown', e => {
+  const ctrl = e.ctrlKey || e.metaKey
+  // e.code — физическая клавиша, работает на любой раскладке (e.key === 'f' ломается на русской)
+  if (ctrl && !e.shiftKey && !e.altKey && e.code === 'KeyF') {
+    e.preventDefault()
+    openSearchPanel()
+  }
+  if (e.key === 'Escape' && !searchPanelEl.hidden) {
+    e.preventDefault()
+    closeSearchPanel()
+  }
+})
+
+function openSearchPanel() {
+  // выставляет флаг «панель открыта» в CM — без него нет подсветки совпадений
+  cmOpenSearchPanel(editor.view)
+
+  searchPanelEl.hidden = false
+  statusBarEl.classList.add('searching')
+
+  // если есть выделение — подставить в поле
+  const sel = editor.view.state.selection.main
+  if (!sel.empty) {
+    const text = editor.view.state.sliceDoc(sel.from, sel.to)
+    if (text.length < 100 && !text.includes('\n')) {
+      searchInput.value = text
+    }
+  }
+
+  searchInput.focus()
+  searchInput.select()
+  applySearchQuery()
+}
+
+function closeSearchPanel() {
+  cmCloseSearchPanel(editor.view)
+  searchPanelEl.hidden = true
+  statusBarEl.classList.remove('searching')
+  editor.focus()
 }

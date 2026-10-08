@@ -319,16 +319,108 @@ body {
   background: var(--bg-statusbar);
   color: var(--text-inverse);
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: 0 12px;
   font-size: 12px;
+  height: 24px;
+  overflow: hidden;
+}
+
+/* Обычный вид статусбара */
+#status-normal {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+/* Когда поиск открыт — обычный вид скрыт */
+#status-bar.searching #status-normal {
+  display: none;
 }
 
 .status-right {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+#search-panel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  font-size: 12px;
+}
+
+#search-panel[hidden] {
+  display: none;
+}
+
+#search-panel input[type='text'] {
+  background: var(--bg-app);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+  height: 18px;
+}
+
+#search-panel input[type='text']:focus {
+  border-color: var(--accent);
+}
+
+#search-input,
+#replace-input {
+  flex: 1;
+  min-width: 80px;
+}
+
+#search-panel button {
+  background: transparent;
+  color: var(--text-inverse);
+  border: none;
+  padding: 0 6px;
+  height: 18px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  line-height: 1;
+}
+
+#search-panel button:hover {
+  background: var(--bg-hover);
+}
+
+#search-panel button:active {
+  background: var(--accent);
+  color: var(--text-inverse);
+}
+
+#search-close {
+  margin-left: auto;
+  font-size: 14px;
+  padding: 0 8px;
+}
+
+.search-case {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  user-select: none;
+  padding: 0 4px;
+  color: var(--text-inverse);
+  font-size: 11px;
+}
+
+.search-case input {
+  cursor: pointer;
+  margin: 0;
 }
 
 #theme-select {
