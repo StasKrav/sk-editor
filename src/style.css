@@ -649,3 +649,15 @@ body {
 #toc-list.focused .toc-row.selected {
   box-shadow: inset 2px 0 0 var(--accent);
 }
+
+/* Все совпадения — бледные */
+.cm-editor .cm-searchMatch {
+  background: rgba(255, 220, 100, 0.05) !important;
+  outline: 1px solid rgba(255, 220, 100, 0.35);
+}
+
+/* Текущее (выбранное) совпадение — ярче */
+.cm-editor .cm-searchMatch.cm-searchMatch-selected {
+  background: rgba(255, 180, 60, 0.55) !important;
+  outline: 1px solid rgba(255, 180, 60, 0.9);
+}

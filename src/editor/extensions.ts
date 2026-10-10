@@ -28,6 +28,7 @@ const editorTheme = EditorView.theme({
   '.cm-scroller': {
     fontFamily: "'JetBrains Mono', 'Consolas', monospace",
     overflow: 'auto',
+    scrollPaddingTop: '48px',   // ← запас сверху
   },
   '.cm-gutters': {
     backgroundColor: 'var(--cm-bg)',
@@ -77,6 +78,7 @@ export function baseExtensions(cb: EditorCallbacks, theme: EditorTheme = 'dark')
       ...defaultKeymap,
       ...historyKeymap,
     ]),
+    EditorView.scrollMargins.of(() => ({ top: 48 })),
     editorTheme,
     highlightConf.of(syntaxHighlighting(style)),
     EditorView.updateListener.of(update => {
