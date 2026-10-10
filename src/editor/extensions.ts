@@ -1,6 +1,6 @@
 import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
-import { bracketMatching, indentOnInput, foldGutter, syntaxHighlighting } from '@codemirror/language'
+import { bracketMatching, indentOnInput, syntaxHighlighting } from '@codemirror/language'
 import { search, highlightSelectionMatches } from '@codemirror/search'
 import { Compartment, EditorState } from '@codemirror/state'
 import { langExtension, type LangKind } from './languages'
@@ -75,7 +75,6 @@ export function baseExtensions(cb: EditorCallbacks, theme: EditorTheme = 'dark')
   return [
     lineNumbers(),
     highlightActiveLine(),
-    foldGutter(),
     bracketMatching(),
     indentOnInput(),
     highlightSelectionMatches(),

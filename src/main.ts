@@ -334,6 +334,7 @@ btnOpenFolder.addEventListener('click', async () => {
     const root = await fs.openProject()
     if (root) {
       tree.setRoot(root)
+      tree.focus()                    // ← фокус в дерево
       setStatus(`Проект открыт: ${root.name}`)
     }
   } catch (err) {
