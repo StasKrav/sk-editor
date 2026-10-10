@@ -6,9 +6,9 @@
 
   /* Фоны */
   --bg-app:              #2b2b2b;
-  --bg-sidebar:          #303030;
+  --bg-sidebar:          #252525;
   --bg-editor:           #3f3f3f;
-  --bg-tabbar:           #303030;
+  --bg-tabbar:           #252525;
   --bg-tab-inactive:     #383838;
   --bg-hover:            #4f4f4f;
   --bg-selection:        #5f5f5f;
@@ -25,6 +25,7 @@
   --text-muted:          #7f9f7f;
   --text-dim:            #709080;
   --text-inverse:        #dcdccc;
+  --tab-fg-inactive:     #888888;
 
   /* Акценты */
   --modified-dot:        #f0dfaf;
@@ -73,6 +74,7 @@
   --text-muted:          #93a1a1;
   --text-dim:            #b0a99a;
   --text-inverse:        #222222;
+  --tab-fg-inactive:     #a0a0a0; 
 
   --modified-dot:        #cb4b16;
 
@@ -137,7 +139,7 @@ body {
 
 .sidebar-toolbar {
   display: flex;
-  border-bottom: 1px solid var(--border);
+  /* border-bottom: 1px solid var(--border); */
   flex-shrink: 0;
 }
 
@@ -194,7 +196,7 @@ body {
 
 #resizer {
   grid-area: resizer;
-  background: var(--border);      /* ← фон самой полосы, а не прозрачный */
+  background: transparent;      /* ← фон самой полосы, а не прозрачный */
   cursor: col-resize;
   user-select: none;
   position: relative;
@@ -214,7 +216,7 @@ body {
 
 #resizer:hover,
 #resizer.dragging {
-  background: var(--accent);      /* подсветка на всю ширину 4px */
+  background: var(--bg-hover);      /* подсветка на всю ширину 4px */
 }
 
 /* ─────────────────────────────────────────────
@@ -454,9 +456,9 @@ body {
   align-items: center;
   gap: 8px;
   padding: 6px 8px 6px 12px;
-  border-right: 1px solid var(--border);
-  background: var(--bg-tab-inactive);
-  color: var(--text-muted);
+  /* border-right: 1px solid var(--border); */
+  background: var(--bg-sidebar); 
+  color: var(--tab-fg-inactive);
   cursor: pointer;
   font-size: 12px;
   white-space: nowrap;
@@ -468,7 +470,7 @@ body {
 .tab.active {
   background: var(--bg-editor);
   color: var(--text-inverse);
-  border-top: 1px solid var(--accent);
+  /* border-top: 1px solid var(--accent); */
   padding-top: 5px;
 }
 

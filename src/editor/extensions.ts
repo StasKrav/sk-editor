@@ -33,10 +33,14 @@ const editorTheme = EditorView.theme({
   '.cm-gutters': {
     backgroundColor: 'var(--cm-bg)',
     color: 'var(--text-muted)',
-    borderRight: '1px solid var(--border)',
-    minWidth: '3.5em',
-    width: '3.5em',
+    borderRight: '1px solid var(--cm-bg)',
+    minWidth: '4.5em',
+    width: '4.5em',
     overflow: 'hidden',
+  },
+  '.cm-gutterElement': {
+    padding: '0 8px 0 0',        // ← отступ справа, числа отодвинутся от края
+    textAlign: 'center',          // ← выравнивание по правому краю
   },
   '.cm-activeLine': {
     backgroundColor: 'var(--cm-active-line)',
