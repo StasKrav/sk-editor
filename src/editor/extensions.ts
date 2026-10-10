@@ -50,9 +50,19 @@ const editorTheme = EditorView.theme({
   '.cm-cursor': {
     borderLeftColor: 'var(--cm-cursor)',
   },
-  // Скрываем контейнер панелей CM — панель поиска у нас в статусбаре
+  // Скрываем контейнер панелей CM — панель поиска у нас в статусбаре.
+  // ВАЖНО: нельзя использовать display: none! CM при открытой панели читает
+  // геометрию .cm-panels (getBoundingClientRect) в scrollMargin() при
+  // прокрутке к совпадению поиска; display:none даёт нулевой прямоугольник,
+  // из-за чего scrollRectIntoView ошибается и найденный фрагмент оказывается
+  // ВЫШЕ верхней границы редактора. Поэтому прячем панель «мягко»:
+  // вне потока, нулевой высоты и невидимой.
   '.cm-panels': {
-    display: 'none',
+    position: 'absolute',
+    height: '0',
+    overflow: 'hidden',
+    visibility: 'hidden',
+    pointerEvents: 'none',
   },
 })
 

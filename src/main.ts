@@ -655,7 +655,7 @@ searchCloseBtn.addEventListener('click', closeSearchPanel)
 searchInput.addEventListener('input', () => {
   applySearchQuery(true)   // ← при каждом вводе прыгаем к первому совпадению
 })
-searchCaseChk.addEventListener('change', applySearchQuery)
+searchCaseChk.addEventListener('change', () => applySearchQuery())
 
 searchInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
