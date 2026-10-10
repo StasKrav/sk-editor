@@ -607,21 +607,19 @@ const searchCaseChk   = document.getElementById('search-case-sensitive') as HTML
 function applySearchQuery(moveToMatch = false) {
   const query = searchInput.value
   const caseSensitive = searchCaseChk.checked
+  const replace = replaceInput.value            // ← добавили
 
-  // 1. Устанавливаем запрос (подсветка)
   editor.view.dispatch({
     effects: setSearchQuery.of(new SearchQuery({
       search: query,
+      replace: replace,                          // ← и это
       caseSensitive,
       literal: true,
     })),
   })
 
-  // 2. Если нужно прыгнуть — сбрасываем в начало и ищем
   if (moveToMatch && query.length > 0) {
-    // Сбрасываем курсор в самое начало документа
     editor.view.dispatch({ selection: { anchor: 0, head: 0 } })
-    // Теперь ищем от начала — найдёт первое совпадение в файле
     findNext(editor.view)
   }
 }
