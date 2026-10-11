@@ -275,6 +275,32 @@ export class BrowserFileSystem implements FileSystemProvider {
     await dir.removeEntry(name, { recursive: true })
   }
 
+  /** Проверить разрешение без запроса (для восстановления сессии). */
+async checkPermission(): Promise<boolean> {
+  if (!this.rootHandle) return false
+  const opts = { mode: 'readwrite' as const }
+  return (await this.rootHandle.queryPermission(opts)) === 'granted'
+}
+
+/** Запросить разрешение (нужен user gesture). */
+async requestPermission(): Promise<boolean> {
+  if (!this.rootHandle) return false
+  const opts = { mode: 'readwrite' as const }
+  if ((await this.rootHandle.queryPermission(opts)) === 'granted') return true
+  return (await this.rootHandle.requestPermission(opts)) === 'granted'
+}
+
+/** Установить root handle извне (при восстановлении). */
+setRootHandle(handle: FileSystemDirectoryHandle): void {
+  this.rootHandle = handle
+  this.rootName = handle.name
+}
+
+/** Имя корня (для отображения). */
+getRootName(): string {
+  return this.rootName
+}
+
   // ── внутренние помощники ─────────────────────
 
   private async readDir(

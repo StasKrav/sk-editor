@@ -23,6 +23,7 @@
     "@codemirror/view": "^6.43.13",
     "@replit/codemirror-indentation-markers": "^6.5.3",
     "codemirror": "^6.0.2",
+    "idb-keyval": "^6.3.0",
     "parse5": "^8.0.1",
     "postcss": "^8.5.29",
     "prettier": "^3.9.9"

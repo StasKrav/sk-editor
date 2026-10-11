@@ -10,54 +10,21 @@ import type { FileEntry } from './fs/types'
 import type { TocSymbol } from './toc/types'
 import { formatCode } from './format/prettier'
 import { langFromFilename } from './editor/languages'
+import { showContextMenu } from './file-manager/context-menu'
+import { saveRootHandle, loadRootHandle, clearRootHandle } from './fs/handle-store'
 
 // ── 1. DOM-элементы ─────────────────────────
 const editorContainer = document.getElementById('editor-container')!
-const tabBarEl         = document.getElementById('tab-bar')!
-const cursorPosEl      = document.getElementById('cursor-pos')!
-const statusMsgEl      = document.getElementById('status-msg')!
-const fileTreeEl       = document.getElementById('file-tree')!
-const tocListEl        = document.getElementById('toc-list')!
-const tocFilterEl      = document.getElementById('toc-filter')!
-const tocFilterInput   = document.getElementById('toc-filter-input') as HTMLInputElement
-const btnOpenFolder    = document.getElementById('btn-open-folder')!
+const tabBarEl = document.getElementById('tab-bar')!
+const cursorPosEl = document.getElementById('cursor-pos')!
+const statusMsgEl = document.getElementById('status-msg')!
+const fileTreeEl = document.getElementById('file-tree')!
+const tocListEl = document.getElementById('toc-list')!
+const tocFilterEl = document.getElementById('toc-filter')!
+const tocFilterInput = document.getElementById('toc-filter-input') as HTMLInputElement
+const btnOpenFolder = document.getElementById('btn-open-folder')!
 const btnOpenFile = document.getElementById('btn-open-file')!
-const sidebarTabBtns   = document.querySelectorAll<HTMLButtonElement>('.sidebar-tabs button')
-
-async function createNewFile() {
-  // если выделена папка — предлагаем создать файл внутри неё
-  const selectedPath = tree.getSelectedPath()
-  const selectedKind = tree.getSelectedKind()
-  const base = (selectedKind === 'dir' && selectedPath) ? selectedPath + '/' : ''
-
-  const path = prompt('Имя файла (можно с путём):', base)
-  if (!path) return
-
-  try {
-    await fs.createFile(path)
-    const root = await fs.refresh()
-    if (root) tree.setRoot(root)
-    const content = await fs.readFile(path)
-    tabs.open(path, content)
-    setStatus(`Создан: ${path}`)
-  } catch (err) {
-    setStatus(`Ошибка: ${(err as Error).message}`)
-  }
-}
-
-async function createNewFolder() {
-  const path = prompt('Имя папки (можно с вложенностью, например src/utils):')
-  if (!path) return
-
-  try {
-    await fs.createFolder(path)
-    const root = await fs.refresh()
-    if (root) tree.setRoot(root)
-    setStatus(`Создана папка: ${path}`)
-  } catch (err) {
-    setStatus(`Ошибка: ${(err as Error).message}`)
-  }
-}
+const sidebarTabBtns = document.querySelectorAll<HTMLButtonElement>('.sidebar-tabs button')
 
 // ── 2. Статусбар ────────────────────────────
 function setStatus(msg: string) {
@@ -80,13 +47,130 @@ const tabs = new TabManager(editor)
 
 const tabBar = new TabBar(tabBarEl, {
   onActivate: id => tabs.activate(id),
-  onClose:    id => tabs.close(id),
+  onClose: id => tabs.close(id),
 })
 
 // ── 5. Файловая система ─────────────────────
 const fs = new BrowserFileSystem()
 
-// ── 6. Дерево файлов ────────────────────────
+// ── 6. CRUD-операции (используются и в callbacks дерева, и в ПКМ-меню) ────
+
+async function refreshAfterChange() {
+  const root = await fs.refresh()
+  if (root) tree.setRoot(root)
+}
+
+async function doDelete(entry: FileEntry) {
+  const msg = entry.kind === 'dir'
+    ? `Удалить папку «${entry.name}» со всем содержимым?`
+    : `Удалить файл «${entry.name}»?`
+  if (!confirm(msg)) return
+
+  try {
+    await fs.deleteEntry(entry.path)
+    const tab = tabs.getTabs().find(t => t.filename === entry.path)
+    if (tab) tabs.close(tab.id)
+    await refreshAfterChange()
+    setStatus(`Удалено: ${entry.path}`)
+  } catch (err) {
+    setStatus(`Ошибка удаления: ${(err as Error).message}`)
+  }
+}
+
+async function doRename(entry: FileEntry) {
+  const newName = prompt('Новое имя:', entry.name)
+  if (!newName || newName === entry.name) return
+  if (newName.includes('/')) {
+    setStatus('Переименование не перемещает — только имя')
+    return
+  }
+
+  const parentPath = entry.path.includes('/')
+    ? entry.path.slice(0, entry.path.lastIndexOf('/'))
+    : ''
+  const newPath = parentPath ? `${parentPath}/${newName}` : newName
+
+  try {
+    await fs.renameEntry(entry.path, newPath)
+    const tab = tabs.getTabs().find(t => t.filename === entry.path)
+    if (tab) {
+      tab.filename = newPath
+      tab.language = langFromFilename(newPath)
+      tabBar.render({ tabs: tabs.getTabs(), activeId: tabs.getActiveId() })
+    }
+    await refreshAfterChange()
+    setStatus(`Переименовано: ${entry.name} → ${newName}`)
+  } catch (err) {
+    setStatus(`Ошибка переименования: ${(err as Error).message}`)
+  }
+}
+
+async function doDuplicate(entry: FileEntry) {
+  try {
+    const newPath = await fs.duplicateEntry(entry.path)
+    await refreshAfterChange()
+    setStatus(`Создана копия: ${newPath}`)
+  } catch (err) {
+    setStatus(`Ошибка копирования: ${(err as Error).message}`)
+  }
+}
+
+async function doCreateFile(dirPath: string, name: string) {
+  const path = dirPath ? `${dirPath}/${name}` : name
+  try {
+    await fs.createFile(path)
+    const root = await fs.refresh()
+    if (root) tree.setRoot(root)
+    if (dirPath) tree.expandPath(dirPath)
+    const content = await fs.readFile(path)
+    tabs.open(path, content)
+    setStatus(`Создан: ${path}`)
+  } catch (err) {
+    setStatus(`Ошибка: ${(err as Error).message}`)
+  }
+}
+
+async function doCreateFolder(dirPath: string, name: string) {
+  const path = dirPath ? `${dirPath}/${name}` : name
+  try {
+    await fs.createFolder(path)
+    const root = await fs.refresh()
+    if (root) tree.setRoot(root)
+    if (dirPath) tree.expandPath(dirPath)
+    setStatus(`Создана папка: ${path}`)
+  } catch (err) {
+    setStatus(`Ошибка: ${(err as Error).message}`)
+  }
+}
+
+async function createNewFile() {
+  const selectedPath = tree.getSelectedPath()
+  const selectedKind = tree.getSelectedKind()
+  const base = selectedKind === 'dir' && selectedPath ? selectedPath + '/' : ''
+
+  const path = prompt('Имя файла (можно с путём):', base)
+  if (!path) return
+
+  // если введён путь — разбираем
+  const lastSlash = path.lastIndexOf('/')
+  const dirPath = lastSlash >= 0 ? path.slice(0, lastSlash) : ''
+  const name = lastSlash >= 0 ? path.slice(lastSlash + 1) : path
+
+  await doCreateFile(dirPath, name)
+}
+
+async function createNewFolder() {
+  const path = prompt('Имя папки (можно с вложенностью, например src/utils):')
+  if (!path) return
+
+  const lastSlash = path.lastIndexOf('/')
+  const dirPath = lastSlash >= 0 ? path.slice(0, lastSlash) : ''
+  const name = lastSlash >= 0 ? path.slice(lastSlash + 1) : path
+
+  await doCreateFolder(dirPath, name)
+}
+
+// ── 7. Дерево файлов ────────────────────────
 const tree = new TreeView(fileTreeEl, {
   async onFileClick(entry: FileEntry) {
     try {
@@ -103,83 +187,111 @@ const tree = new TreeView(fileTreeEl, {
     }
   },
 
-  async onDeleteRequest(entry: FileEntry) {
-      const msg = entry.kind === 'dir'
-        ? `Удалить папку «${entry.name}» со всем содержимым?`
-        : `Удалить файл «${entry.name}»?`
-      if (!confirm(msg)) return
-  
-      try {
-        await fs.deleteEntry(entry.path)
-  
-        // если файл был открыт во вкладках — закрываем
-        const tab = tabs.getTabs().find(t => t.filename === entry.path)
-        if (tab) tabs.close(tab.id)
-  
-        // обновляем дерево
-        const root = await fs.refresh()
-        if (root) tree.setRoot(root)
-  
-        setStatus(`Удалено: ${entry.path}`)
-      } catch (err) {
-        setStatus(`Ошибка удаления: ${(err as Error).message}`)
-      }
+  onDeleteRequest: doDelete,
+  onRenameRequest: doRename,
+  onDuplicateRequest: doDuplicate,
+
+  onRootContextMenu: (x, y) => {
+  showContextMenu(x, y, [
+    {
+      label: 'Новый файл в корне',
+      action: () => {
+        const name = prompt('Имя файла:')
+        if (name) doCreateFile('', name)
+      },
     },
+    {
+      label: 'Новая папка в корне',
+      action: () => {
+        const name = prompt('Имя папки:')
+        if (name) doCreateFolder('', name)
+      },
+    },
+    { separator: true },
+    {
+      label: 'Обновить дерево',
+      action: async () => {
+        try {
+          const root = await fs.refresh()
+          if (root) {
+            tree.setRoot(root)
+            setStatus('Дерево обновлено')
+          }
+        } catch (err) {
+          setStatus(`Ошибка: ${(err as Error).message}`)
+        }
+      },
+    },
+  ])
+},
 
-  async onRenameRequest(entry: FileEntry) {
-    const newName = prompt('Новое имя:', entry.name)
-    if (!newName || newName === entry.name) return
-  
-    // запрещаем слэши — только имя, без перемещения
-    if (newName.includes('/')) {
-      setStatus('Переименование не перемещает — используйте только имя файла')
-      return
-    }
-  
-    // вычисляем новый путь: та же папка, новое имя
-    const parentPath = entry.path.includes('/')
-      ? entry.path.slice(0, entry.path.lastIndexOf('/'))
-      : ''
-    const newPath = parentPath ? `${parentPath}/${newName}` : newName
-  
-    try {
-      await fs.renameEntry(entry.path, newPath)
-  
-      // если файл открыт — обновляем путь в вкладке
-      const tab = tabs.getTabs().find(t => t.filename === entry.path)
-      if (tab) {
-        tab.filename = newPath
-        tab.language = langFromFilename(newPath)
-        tabBar.render({ tabs: tabs.getTabs(), activeId: tabs.getActiveId() })
-      }
-  
-      const root = await fs.refresh()
-      if (root) tree.setRoot(root)
-  
-      setStatus(`Переименовано: ${entry.path} → ${newPath}`)
-    } catch (err) {
-      setStatus(`Ошибка переименования: ${(err as Error).message}`)
-    }
-  },
+  onContextMenu: (entry, x, y) => {
+    const isDir = entry.kind === 'dir'
 
-  async onDuplicateRequest(entry: FileEntry) {
-    try {
-      const newPath = await fs.duplicateEntry(entry.path)
-      const root = await fs.refresh()
-      if (root) tree.setRoot(root)
-      setStatus(`Создана копия: ${newPath}`)
-    } catch (err) {
-      setStatus(`Ошибка копирования: ${(err as Error).message}`)
+    const items: any[] = []
+
+    if (isDir) {
+      items.push({
+        label: 'Новый файл',
+        action: () => {
+          const name = prompt('Имя файла:')
+          if (name) doCreateFile(entry.path, name)
+        },
+      })
+      items.push({
+        label: 'Новая папка',
+        action: () => {
+          const name = prompt('Имя папки:')
+          if (name) doCreateFolder(entry.path, name)
+        },
+      })
+      items.push({ separator: true })
     }
+
+    if (entry.kind === 'file') {
+      items.push({
+        label: 'Открыть',
+        action: async () => {
+          try {
+            const existing = tabs.getTabs().find(t => t.filename === entry.path)
+            if (existing) {
+              tabs.activate(existing.id)
+              return
+            }
+            const content = await fs.readFile(entry.path)
+            tabs.open(entry.path, content)
+            setStatus(`Открыт: ${entry.path}`)
+          } catch (err) {
+            setStatus(`Ошибка: ${(err as Error).message}`)
+          }
+        },
+      })
+      items.push({ separator: true })
+    }
+
+    items.push({
+      label: 'Переименовать',
+      action: () => doRename(entry),
+    })
+    items.push({
+      label: 'Дублировать',
+      action: () => doDuplicate(entry),
+    })
+    items.push({ separator: true })
+    items.push({
+      label: 'Удалить',
+      danger: true,
+      action: () => doDelete(entry),
+    })
+
+    showContextMenu(x, y, items)
   },
 })
 
-
-// ── 7. TOC ──────────────────────────────────
+// ── 8. TOC ──────────────────────────────────
 const toc = new TocView(tocListEl, {
   onSymbolClick(sym: TocSymbol) {
     const doc = editor.view.state.doc
-    // на всякий случай защитимся от выхода за пределы документа
     const lineNo = Math.min(Math.max(sym.line, 1), doc.lines)
     const line = doc.line(lineNo)
     const pos = Math.min(line.from + sym.col, line.to)
@@ -217,7 +329,7 @@ tocFilterInput.addEventListener('input', () => {
   toc.setFilter(tocFilterInput.value)
 })
 
-// ── 8. Переключение вкладок панели Files / TOC ─
+// ── 9. Переключение вкладок панели Files / TOC ─
 sidebarTabBtns.forEach(btn => {
   btn.addEventListener('click', () => {
     const mode = btn.dataset.mode as 'files' | 'toc'
@@ -225,7 +337,7 @@ sidebarTabBtns.forEach(btn => {
   })
 })
 
-// ===== FORMAT =======
+// ── 10. FORMAT ──────────────────────────────
 async function formatActiveTab() {
   const tab = tabs.getActive()
   if (!tab) {
@@ -249,8 +361,6 @@ async function formatActiveTab() {
     return
   }
 
-  // Применяем одной транзакцией — это сохраняет undo-историю
-  // и корректно двигает курсор.
   editor.view.dispatch({
     changes: {
       from: 0,
@@ -262,6 +372,7 @@ async function formatActiveTab() {
   setStatus('Отформатировано')
 }
 
+// ── 11. Сохранение ──────────────────────────
 async function saveActiveTab() {
   const tab = tabs.getActive()
   if (!tab) {
@@ -272,7 +383,6 @@ async function saveActiveTab() {
   tabs.persistActive()
   const content = editor.view.state.doc.toString()
 
-  // Если у вкладки нет имени — это новый Untitled, идём в «Сохранить как»
   if (!tab.filename || tab.filename.startsWith('Untitled')) {
     await saveActiveTabAs()
     return
@@ -280,10 +390,8 @@ async function saveActiveTab() {
 
   try {
     if (tab.fileHandle) {
-      // Файл открыт через showOpenFilePicker — пишем через его handle
       await fs.writeViaHandle(tab.fileHandle, content)
     } else {
-      // Файл из дерева проекта — пишем через путь
       await fs.writeFile(tab.filename, content)
     }
 
@@ -313,7 +421,7 @@ async function saveActiveTabAs() {
     }
     tab.filename = handle.name
     tab.language = langFromFilename(handle.name)
-    tab.fileHandle = handle          // ← запоминаем handle
+    tab.fileHandle = handle
     tab.modified = false
     tabBar.render({ tabs: tabs.getTabs(), activeId: tabs.getActiveId() })
     setStatus(`Сохранено как: ${handle.name}`)
@@ -322,28 +430,31 @@ async function saveActiveTabAs() {
   }
 }
 
-// ── 9. Реакция на смену вкладок ─────────────
+// ── 12. Реакция на смену вкладок ────────────
 tabs.onChange(e => {
   tabBar.render(e)
   if (!tocListEl.hidden) updateToc()
 })
 
-// ── 10. Кнопка «Открыть папку» ──────────────
+// ── 13. Кнопка «Открыть папку» ──────────────
 btnOpenFolder.addEventListener('click', async () => {
   try {
     const root = await fs.openProject()
     if (root) {
       tree.setRoot(root)
-      tree.focus()                    // ← фокус в дерево
+      tree.collapseAll()
+      tree.focus()
       setStatus(`Проект открыт: ${root.name}`)
+
+      const handle = (fs as any).rootHandle as FileSystemDirectoryHandle | null
+      if (handle) await saveRootHandle(handle)
     }
   } catch (err) {
     setStatus(`Ошибка: ${(err as Error).message}`)
   }
 })
 
-// -- Кнопка "Открыть файл" ---
-
+// ── 14. Кнопка «Открыть файл» ───────────────
 btnOpenFile.addEventListener('click', async () => {
   try {
     const file = await fs.openFile()
@@ -356,7 +467,7 @@ btnOpenFile.addEventListener('click', async () => {
   }
 })
 
-// === Refresh ===
+// ── 15. Кнопка «Обновить дерево» ────────────
 const btnRefreshTree = document.getElementById('btn-refresh-tree')!
 
 btnRefreshTree.addEventListener('click', async () => {
@@ -373,11 +484,10 @@ btnRefreshTree.addEventListener('click', async () => {
   }
 })
 
-// ── 11. Горячие клавиши ─────────────────────
+// ── 16. Горячие клавиши ─────────────────────
 window.addEventListener('keydown', async e => {
   const ctrl = e.ctrlKey || e.metaKey
 
-  // Ctrl+1..9 — переход на N-ю вкладку
   if (ctrl && !e.shiftKey && !e.altKey && /^[1-9]$/.test(e.key)) {
     e.preventDefault()
     const idx = parseInt(e.key, 10) - 1
@@ -395,64 +505,53 @@ window.addEventListener('keydown', async e => {
     return
   }
 
-  // Ctrl+Shift+F — форматировать активную вкладку
-  // e.code вместо e.key — чтобы хоткеи работали на любой раскладке (рус. и т.д.)
   if (ctrl && e.shiftKey && e.code === 'KeyF') {
     e.preventDefault()
     formatActiveTab()
     return
   }
 
-  // Ctrl+S — сохранить активную вкладку
   if (ctrl && e.code === 'KeyS' && !e.shiftKey) {
     e.preventDefault()
     await saveActiveTab()
     return
   }
 
-  // Ctrl+Shift+S — сохранить как
   if (ctrl && e.shiftKey && e.code === 'KeyS') {
     e.preventDefault()
     await saveActiveTabAs()
     return
   }
 
-  // Ctrl+O — открыть папку
   if (ctrl && e.code === 'KeyO' && !e.shiftKey) {
     e.preventDefault()
     btnOpenFolder.click()
     return
   }
 
-  // Alt+O — открыть файл
   if (e.altKey && !ctrl && e.code === 'KeyO') {
     e.preventDefault()
     btnOpenFile.click()
     return
   }
 
-  // Alt+N — новый файл
   if (e.altKey && !ctrl && e.key.toLowerCase() === 'n') {
-    console.log('Alt+N triggered, selectedPath =', tree.getSelectedPath())
     e.preventDefault()
     createNewFile()
     return
   }
-  
-  // Alt+M — новая папка
+
   if (e.altKey && !ctrl && e.key.toLowerCase() === 'm') {
     e.preventDefault()
     createNewFolder()
     return
   }
 
-  // Alt+1 — тумблер: дерево ↔ редактор
   if (e.altKey && !ctrl && e.key === '1') {
     e.preventDefault()
     activateSidebarTab('files')
-  
+
     if (tree.hasFocus()) {
-      // уже в дереве — вернуть в редактор
       editor.focus()
       setStatus('Фокус: редактор')
     } else {
@@ -461,12 +560,11 @@ window.addEventListener('keydown', async e => {
     }
     return
   }
-  
-  // Alt+2 — тумблер: TOC ↔ редактор
+
   if (e.altKey && !ctrl && e.key === '2') {
     e.preventDefault()
     activateSidebarTab('toc')
-  
+
     if (toc.hasFocus()) {
       editor.focus()
       setStatus('Фокус: редактор')
@@ -482,13 +580,9 @@ window.addEventListener('keydown', async e => {
     editor.focus()
     return
   }
-
 })
 
-// ── 12. Стартовое состояние ─────────────────
-setStatus('Готово. Откройте папку проекта (Ctrl+O)')
-
-// ── 13. Тема ────────────────────────────────
+// ── 17. Тема ────────────────────────────────
 type ThemeName = 'zenburn' | 'light'
 
 const themeSelect = document.getElementById('theme-select') as HTMLSelectElement
@@ -513,7 +607,7 @@ themeSelect.addEventListener('change', () => {
 
 applyTheme(getTheme())
 
-// ── 14. Изменение ширины сайдбара ───────────
+// ── 18. Изменение ширины сайдбара ───────────
 const resizer = document.getElementById('resizer')!
 
 const MIN_SIDEBAR = 160
@@ -526,7 +620,6 @@ function setSidebarWidth(px: number) {
   localStorage.setItem(STORAGE_KEY, String(clamped))
 }
 
-// восстановление при загрузке
 const savedWidth = parseInt(localStorage.getItem(STORAGE_KEY) ?? '', 10)
 if (!isNaN(savedWidth)) setSidebarWidth(savedWidth)
 
@@ -537,13 +630,11 @@ resizer.addEventListener('mousedown', e => {
   dragging = true
   resizer.classList.add('dragging')
   document.body.style.cursor = 'col-resize'
-  // временно отключаем выделение текста по всему документу
   document.body.style.userSelect = 'none'
 })
 
 window.addEventListener('mousemove', e => {
   if (!dragging) return
-  // ширина = позиция мыши относительно левого края окна
   setSidebarWidth(e.clientX)
 })
 
@@ -555,13 +646,11 @@ window.addEventListener('mouseup', () => {
   document.body.style.userSelect = ''
 })
 
-// двойной клик — сброс к дефолтной ширине
 resizer.addEventListener('dblclick', () => {
   setSidebarWidth(260)
 })
 
 function activateSidebarTab(mode: 'files' | 'toc') {
-  // обновляем кнопки
   sidebarTabBtns.forEach(b => {
     b.classList.toggle('active', b.dataset.mode === mode)
   })
@@ -578,9 +667,7 @@ function activateSidebarTab(mode: 'files' | 'toc') {
   }
 }
 
-const statusBarEl = document.getElementById('status-bar')!
-
-// ── 15. Панель поиска ───────────────────────
+// ── 19. Панель поиска ───────────────────────
 import {
   SearchQuery,
   setSearchQuery,
@@ -588,34 +675,36 @@ import {
   findPrevious,
   replaceNext,
   replaceAll,
-  // CM-команды: выставляют внутренний флаг «панель открыта»,
-  // без которого @codemirror/search не подсвечивает совпадения
   openSearchPanel as cmOpenSearchPanel,
   closeSearchPanel as cmCloseSearchPanel,
 } from '@codemirror/search'
 
-const searchPanelEl   = document.getElementById('search-panel')!
-const searchInput     = document.getElementById('search-input') as HTMLInputElement
-const replaceInput    = document.getElementById('replace-input') as HTMLInputElement
-const searchNextBtn   = document.getElementById('search-next')!
-const searchPrevBtn   = document.getElementById('search-prev')!
+const searchPanelEl = document.getElementById('search-panel')!
+const searchInput = document.getElementById('search-input') as HTMLInputElement
+const replaceInput = document.getElementById('replace-input') as HTMLInputElement
+const searchNextBtn = document.getElementById('search-next')!
+const searchPrevBtn = document.getElementById('search-prev')!
 const searchReplaceBtn = document.getElementById('search-replace')!
 const searchReplaceAllBtn = document.getElementById('search-replace-all')!
-const searchCloseBtn  = document.getElementById('search-close')!
-const searchCaseChk   = document.getElementById('search-case-sensitive') as HTMLInputElement
+const searchCloseBtn = document.getElementById('search-close')!
+const searchCaseChk = document.getElementById('search-case-sensitive') as HTMLInputElement
+
+const statusBarEl = document.getElementById('status-bar')!
 
 function applySearchQuery(moveToMatch = false) {
   const query = searchInput.value
   const caseSensitive = searchCaseChk.checked
-  const replace = replaceInput.value            // ← добавили
+  const replace = replaceInput.value
 
   editor.view.dispatch({
-    effects: setSearchQuery.of(new SearchQuery({
-      search: query,
-      replace: replace,                          // ← и это
-      caseSensitive,
-      literal: true,
-    })),
+    effects: setSearchQuery.of(
+      new SearchQuery({
+        search: query,
+        replace: replace,
+        caseSensitive,
+        literal: true,
+      }),
+    ),
   })
 
   if (moveToMatch && query.length > 0) {
@@ -651,10 +740,9 @@ searchReplaceBtn.addEventListener('click', doReplace)
 searchReplaceAllBtn.addEventListener('click', doReplaceAll)
 searchCloseBtn.addEventListener('click', closeSearchPanel)
 
-searchInput.addEventListener('input', () => {
-  applySearchQuery(true)   // ← при каждом вводе прыгаем к первому совпадению
-})
+searchInput.addEventListener('input', () => applySearchQuery(true))
 searchCaseChk.addEventListener('change', () => applySearchQuery())
+replaceInput.addEventListener('input', () => applySearchQuery())
 
 searchInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
@@ -677,10 +765,8 @@ replaceInput.addEventListener('keydown', e => {
   }
 })
 
-// Ctrl+F — открыть поиск
 window.addEventListener('keydown', e => {
   const ctrl = e.ctrlKey || e.metaKey
-  // e.code — физическая клавиша, работает на любой раскладке (e.key === 'f' ломается на русской)
   if (ctrl && !e.shiftKey && !e.altKey && e.code === 'KeyF') {
     e.preventDefault()
     openSearchPanel()
@@ -692,13 +778,10 @@ window.addEventListener('keydown', e => {
 })
 
 function openSearchPanel() {
-  // выставляет флаг «панель открыта» в CM — без него нет подсветки совпадений
   cmOpenSearchPanel(editor.view)
-
   searchPanelEl.hidden = false
   statusBarEl.classList.add('searching')
 
-  // если есть выделение — подставить в поле
   const sel = editor.view.state.selection.main
   if (!sel.empty) {
     const text = editor.view.state.sliceDoc(sel.from, sel.to)
@@ -718,3 +801,70 @@ function closeSearchPanel() {
   statusBarEl.classList.remove('searching')
   editor.focus()
 }
+
+// ── 20. Восстановление сессии ───────────────
+async function restoreSession() {
+  const handle = await loadRootHandle()
+  if (!handle) {
+    setStatus('Готово. Откройте папку проекта (Ctrl+O)')
+    return
+  }
+
+  fs.setRootHandle(handle)
+
+  if (await fs.checkPermission()) {
+    try {
+      const root = await fs.refresh()
+      if (root) {
+        tree.setRoot(root)
+        tree.focus()
+        setStatus(`Проект восстановлен: ${fs.getRootName()}`)
+      }
+    } catch (err) {
+      setStatus(`Ошибка восстановления: ${(err as Error).message}`)
+    }
+  } else {
+    showRestoreBanner(handle)
+  }
+}
+
+function showRestoreBanner(handle: FileSystemDirectoryHandle) {
+  const banner = document.createElement('div')
+  banner.className = 'restore-banner'
+  banner.innerHTML = `
+    <span>Восстановить доступ к папке <b></b>?</span>
+    <button class="btn-primary">Восстановить</button>
+    <button class="btn-ghost">Забыть</button>
+  `
+  ;(banner.querySelector('b') as HTMLElement).textContent = handle.name
+
+  banner.querySelector('.btn-primary')!.addEventListener('click', async () => {
+    const ok = await fs.requestPermission()
+    banner.remove()
+    if (ok) {
+      try {
+        const root = await fs.refresh()
+        if (root) {
+          tree.setRoot(root)
+          tree.focus()
+          setStatus(`Проект восстановлен: ${fs.getRootName()}`)
+        }
+      } catch (err) {
+        setStatus(`Ошибка: ${(err as Error).message}`)
+      }
+    } else {
+      setStatus('Доступ не получен')
+    }
+  })
+
+  banner.querySelector('.btn-ghost')!.addEventListener('click', async () => {
+    await clearRootHandle()
+    banner.remove()
+    setStatus('Восстановление отменено. Откройте папку заново (Ctrl+O)')
+  })
+
+  document.body.appendChild(banner)
+}
+
+// Запуск восстановления после инициализации
+restoreSession()
