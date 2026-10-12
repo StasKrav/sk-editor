@@ -12,6 +12,8 @@ import { formatCode } from './format/prettier'
 import { langFromFilename } from './editor/languages'
 import { showContextMenu } from './file-manager/context-menu'
 import { saveRootHandle, loadRootHandle, clearRootHandle } from './fs/handle-store'
+import { registerKeybindings } from './keybindings'
+import { EditorView } from '@codemirror/view'
 
 // ── 1. DOM-элементы ─────────────────────────
 const editorContainer = document.getElementById('editor-container')!
@@ -485,101 +487,30 @@ btnRefreshTree.addEventListener('click', async () => {
 })
 
 // ── 16. Горячие клавиши ─────────────────────
-window.addEventListener('keydown', async e => {
-  const ctrl = e.ctrlKey || e.metaKey
-
-  if (ctrl && !e.shiftKey && !e.altKey && /^[1-9]$/.test(e.key)) {
-    e.preventDefault()
-    const idx = parseInt(e.key, 10) - 1
-    const list = tabs.getTabs()
-    if (idx < list.length) {
-      tabs.activate(list[idx].id)
-    }
-    return
-  }
-
-  if (ctrl && e.key === '0') {
-    e.preventDefault()
-    const list = tabs.getTabs()
-    if (list.length > 0) tabs.activate(list[list.length - 1].id)
-    return
-  }
-
-  if (ctrl && e.shiftKey && e.code === 'KeyF') {
-    e.preventDefault()
-    formatActiveTab()
-    return
-  }
-
-  if (ctrl && e.code === 'KeyS' && !e.shiftKey) {
-    e.preventDefault()
-    await saveActiveTab()
-    return
-  }
-
-  if (ctrl && e.shiftKey && e.code === 'KeyS') {
-    e.preventDefault()
-    await saveActiveTabAs()
-    return
-  }
-
-  if (ctrl && e.code === 'KeyO' && !e.shiftKey) {
-    e.preventDefault()
-    btnOpenFolder.click()
-    return
-  }
-
-  if (e.altKey && !ctrl && e.code === 'KeyO') {
-    e.preventDefault()
-    btnOpenFile.click()
-    return
-  }
-
-  if (e.altKey && !ctrl && e.key.toLowerCase() === 'n') {
-    e.preventDefault()
-    createNewFile()
-    return
-  }
-
-  if (e.altKey && !ctrl && e.key.toLowerCase() === 'm') {
-    e.preventDefault()
-    createNewFolder()
-    return
-  }
-
-  if (e.altKey && !ctrl && e.key === '1') {
-    e.preventDefault()
-    activateSidebarTab('files')
-
-    if (tree.hasFocus()) {
-      editor.focus()
-      setStatus('Фокус: редактор')
-    } else {
-      tree.focusFirst()
-      setStatus('Фокус: файлы')
-    }
-    return
-  }
-
-  if (e.altKey && !ctrl && e.key === '2') {
-    e.preventDefault()
-    activateSidebarTab('toc')
-
-    if (toc.hasFocus()) {
-      editor.focus()
-      setStatus('Фокус: редактор')
-    } else {
-      toc.focusFirst()
-      setStatus('Фокус: оглавление')
-    }
-    return
-  }
-
-  if (e.key === 'Escape' && document.activeElement === fileTreeEl) {
-    e.preventDefault()
-    editor.focus()
-    return
-  }
+registerKeybindings({
+  editor,
+  tabs,
+  formatActiveTab,
+  saveActiveTab,
+  saveActiveTabAs,
+  createNewFile,
+  createNewFolder,
+  openSearchPanel,
+  closeSearchPanel, 
+  activateSidebarTab,
+  tree: {
+    hasFocus: () => tree.hasFocus(),
+    focus: () => tree.focus(),
+    focusFirst: () => tree.focusFirst(),
+  },
+  toc: {
+    hasFocus: () => toc.hasFocus(),
+    focusFirst: () => toc.focusFirst(),
+  },
+  btnOpenFolder,
+  btnOpenFile,
+  fileTreeEl,
+  setStatus,
 })
 
 // ── 17. Тема ────────────────────────────────
@@ -713,20 +644,37 @@ function applySearchQuery(moveToMatch = false) {
   }
 }
 
+const SCROLL_MARGIN_TOP = 80
+
+function scrollMatchIntoView() {
+  const view = editor.view
+  const pos = view.state.selection.main.head
+
+  view.dispatch({
+    effects: EditorView.scrollIntoView(pos, {
+      y: 'start',
+      yMargin: SCROLL_MARGIN_TOP,
+    }),
+  })
+}
+
 function doFindNext() {
   applySearchQuery()
   findNext(editor.view)
+  scrollMatchIntoView()
 }
 
 function doFindPrev() {
   applySearchQuery()
   findPrevious(editor.view)
+  scrollMatchIntoView()
 }
 
 function doReplace() {
   applySearchQuery()
   replaceNext(editor.view)
   findNext(editor.view)
+  scrollMatchIntoView()
 }
 
 function doReplaceAll() {
@@ -765,17 +713,6 @@ replaceInput.addEventListener('keydown', e => {
   }
 })
 
-window.addEventListener('keydown', e => {
-  const ctrl = e.ctrlKey || e.metaKey
-  if (ctrl && !e.shiftKey && !e.altKey && e.code === 'KeyF') {
-    e.preventDefault()
-    openSearchPanel()
-  }
-  if (e.key === 'Escape' && !searchPanelEl.hidden) {
-    e.preventDefault()
-    closeSearchPanel()
-  }
-})
 
 function openSearchPanel() {
   cmOpenSearchPanel(editor.view)

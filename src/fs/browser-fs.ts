@@ -278,15 +278,16 @@ export class BrowserFileSystem implements FileSystemProvider {
   /** Проверить разрешение без запроса (для восстановления сессии). */
 async checkPermission(): Promise<boolean> {
   if (!this.rootHandle) return false
+  if (typeof this.rootHandle.queryPermission !== 'function') return false
   const opts = { mode: 'readwrite' as const }
   return (await this.rootHandle.queryPermission(opts)) === 'granted'
 }
 
-/** Запросить разрешение (нужен user gesture). */
 async requestPermission(): Promise<boolean> {
   if (!this.rootHandle) return false
+  if (typeof this.rootHandle.requestPermission !== 'function') return false
   const opts = { mode: 'readwrite' as const }
-  if ((await this.rootHandle.queryPermission(opts)) === 'granted') return true
+  if ((await this.rootHandle.queryPermission!(opts)) === 'granted') return true
   return (await this.rootHandle.requestPermission(opts)) === 'granted'
 }
 
