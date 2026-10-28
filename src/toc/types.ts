@@ -1,3 +1,4 @@
+// src/toc/types.ts
 export type SymbolKind =
   | 'function'
   | 'class'
@@ -8,6 +9,7 @@ export type SymbolKind =
   | 'css-variable'
   | 'html-element'
   | 'html-id'
+  | 'heading'
 
 export interface TocSymbol {
   name: string

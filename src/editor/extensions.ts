@@ -1,10 +1,12 @@
 import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
-import { bracketMatching, indentOnInput, syntaxHighlighting } from '@codemirror/language'
+import { bracketMatching, indentOnInput, syntaxHighlighting, syntaxTree } from '@codemirror/language'
 import { search, highlightSelectionMatches } from '@codemirror/search'
-import { Compartment, EditorState } from '@codemirror/state'
+import { Compartment, EditorSelection, EditorState } from '@codemirror/state'
+import type { SyntaxNode } from '@lezer/common'
 import { langExtension, type LangKind } from './languages'
 import { zenburnHighlight, solarizedLightHighlight } from './cm-highlight'
+import { expandSelectionExtension } from 'codemirror-expand-selection'
 
 export const languageConf = new Compartment()
 export const highlightConf = new Compartment()
@@ -70,6 +72,53 @@ const editorTheme = EditorView.theme({
   },
 })
 
+// ── Выделение всей функции (Ctrl+Alt+Space) ─────────────────
+// Узлы синтаксического дерева, которые считаем «функцией»:
+// JS/TS — объявления/выражения функций, стрелочные функции, методы и классы;
+// CSS — правила и at-правила (аналог «блока»).
+const FUNCTION_NODE_RE =
+  /^(FunctionDeclaration|FunctionExpression|ArrowFunction|MethodDeclaration|ClassDeclaration|ClassExpression|PropertyDefinition|RuleSet|AtRule)$/
+
+function findFunctionNode(state: EditorState): SyntaxNode | null {
+  const { head } = state.selection.main
+  let node: SyntaxNode | null = syntaxTree(state).resolveInner(head, -1)
+  while (node) {
+    if (FUNCTION_NODE_RE.test(node.name)) return node
+    node = node.parent
+  }
+  return null
+}
+
+// Расширяем выделение на «обёртку» функции, чтобы захватить имя:
+// const foo = () => {} / const foo = function() {} → вся VariableDeclaration
+// foo = () => {} в классе → вся PropertyDefinition
+// export function foo() {} → вместе с ключевым словом export
+function expandToStatement(node: SyntaxNode): SyntaxNode {
+  let cur = node
+  const parent = cur.parent
+  if (
+    parent &&
+    (cur.name === 'ArrowFunction' || cur.name === 'FunctionExpression') &&
+    (parent.name === 'VariableDeclaration' || parent.name === 'PropertyDefinition')
+  ) {
+    cur = parent
+  }
+  const p = cur.parent
+  if (p && p.name.includes('Export')) cur = p
+  return cur
+}
+
+export function selectFunction(view: EditorView): boolean {
+  const node = findFunctionNode(view.state)
+  if (!node) return false
+  const target = expandToStatement(node)
+  view.dispatch({
+    selection: EditorSelection.single(target.from, target.to),
+    scrollIntoView: true,
+  })
+  return true
+}
+
 export function baseExtensions(cb: EditorCallbacks, theme: EditorTheme = 'dark') {
   const style = theme === 'light' ? lightHighlight : darkHighlight
   return [
@@ -86,8 +135,10 @@ export function baseExtensions(cb: EditorCallbacks, theme: EditorTheme = 'dark')
       createPanel: () => ({ dom: document.createElement('div') }),
     }),
     history(),
+    expandSelectionExtension(),
     keymap.of([
       indentWithTab,
+      { key: 'Ctrl-Alt-Space', run: selectFunction },
       ...defaultKeymap,
       ...historyKeymap,
     ]),

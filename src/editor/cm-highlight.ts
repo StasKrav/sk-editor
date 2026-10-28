@@ -63,6 +63,22 @@ export const zenburnHighlight = HighlightStyle.define([
 
   // Ошибки
   { tag: tags.invalid,                 color: '#cc9393', textDecoration: 'underline wavy' },
+
+  // Zenburn
+  // Markdown
+  { tag: tags.heading,             color: '#f0dfaf', fontWeight: 'bold' },
+  { tag: tags.heading1,            color: '#f0dfaf', fontWeight: 'bold', fontSize: '1.2em' },
+  { tag: tags.heading2,            color: '#f0dfaf', fontWeight: 'bold' },
+  { tag: tags.strong,              color: '#dfaf8f', fontWeight: 'bold' },
+  { tag: tags.emphasis,            color: '#dfaf8f', fontStyle: 'italic' },
+  { tag: tags.strikethrough,       color: '#7f9f7f', textDecoration: 'line-through' },
+  { tag: tags.link,                color: '#8cd0d3', textDecoration: 'underline' },
+  { tag: tags.url,                 color: '#7f9f7f' },
+  { tag: tags.monospace,           color: '#cc9393', fontFamily: 'monospace' },
+  { tag: tags.quote,               color: '#7f9f7f', fontStyle: 'italic' },
+  { tag: tags.list,                color: '#f0dfaf' },
+  { tag: tags.contentSeparator,    color: '#7f9f7f' },
+  { tag: tags.processingInstruction, color: '#dc8cc3' },   // ```lang, #, >, -, [ ] и т.п.
 ])
 
 /**
@@ -115,4 +131,19 @@ export const solarizedLightHighlight = HighlightStyle.define([
   { tag: tags.angleBracket,            color: '#93a1a1' },
 
   { tag: tags.invalid,                 color: '#dc322f', textDecoration: 'underline wavy' },
+
+  // Solarized Light
+  { tag: tags.heading,             color: '#b58900', fontWeight: 'bold' },
+  { tag: tags.heading1,            color: '#b58900', fontWeight: 'bold', fontSize: '1.2em' },
+  { tag: tags.heading2,            color: '#b58900', fontWeight: 'bold' },
+  { tag: tags.strong,              color: '#cb4b16', fontWeight: 'bold' },
+  { tag: tags.emphasis,            color: '#cb4b16', fontStyle: 'italic' },
+  { tag: tags.strikethrough,       color: '#93a1a1', textDecoration: 'line-through' },
+  { tag: tags.link,                color: '#268bd2', textDecoration: 'underline' },
+  { tag: tags.url,                 color: '#93a1a1' },
+  { tag: tags.monospace,           color: '#dc322f', fontFamily: 'monospace' },
+  { tag: tags.quote,               color: '#93a1a1', fontStyle: 'italic' },
+  { tag: tags.list,                color: '#b58900' },
+  { tag: tags.contentSeparator,    color: '#93a1a1' },
+  { tag: tags.processingInstruction, color: '#6c71c4' },
 ])

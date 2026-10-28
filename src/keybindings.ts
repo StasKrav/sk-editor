@@ -93,6 +93,24 @@ export function registerKeybindings(deps: KeybindingsDeps): () => void {
       return
     }
 
+        // ── Закрыть активную вкладку (Alt+W) ──────────────────────
+    if (e.altKey && !ctrl && !e.shiftKey && e.code === 'KeyW') {
+      e.preventDefault()
+      const active = deps.tabs.getActive()
+      if (!active) return
+
+      if (active.modified) {
+        const ok = confirm(
+          `«${active.filename}» изменён. Закрыть без сохранения?`,
+        )
+        if (!ok) return
+      }
+
+      deps.tabs.close(active.id)
+      deps.setStatus(`Закрыто: ${active.filename}`)
+      return
+    }
+
     // ── Открытие проекта / файла ──────────────────────────────
     if (ctrl && e.code === 'KeyO' && !e.shiftKey) {
       e.preventDefault()
@@ -159,3 +177,4 @@ export function registerKeybindings(deps: KeybindingsDeps): () => void {
   window.addEventListener('keydown', handler)
   return () => window.removeEventListener('keydown', handler)
 }
+

@@ -1,9 +1,11 @@
+// src/format/prettier.ts
 import * as prettier from 'prettier/standalone'
 import * as pluginBabel from 'prettier/plugins/babel'
 import * as pluginEstree from 'prettier/plugins/estree'
 import * as pluginHtml from 'prettier/plugins/html'
 import * as pluginPostcss from 'prettier/plugins/postcss'
 import * as pluginTypescript from 'prettier/plugins/typescript'
+import * as pluginMarkdown from 'prettier/plugins/markdown'
 import type { LangKind } from '../editor/languages'
 
 // Каждому нашему языку — свой parser у Prettier.
@@ -14,6 +16,7 @@ function parserFor(lang: LangKind): string | null {
     case 'ts':   return 'typescript'
     case 'css':  return 'css'
     case 'html': return 'html'
+    case 'md':   return 'markdown'
     default:     return null
   }
 }
@@ -25,6 +28,7 @@ const plugins = [
   pluginHtml,
   pluginPostcss,
   pluginTypescript,
+  pluginMarkdown,
 ]
 
 export interface FormatResult {
@@ -46,8 +50,8 @@ export async function formatCode(
     const formatted = await prettier.format(code, {
       parser,
       plugins,
-      semi: false,          // без ; в конце строк
-      singleQuote: true,    // одинарные кавычки
+      semi: false,
+      singleQuote: true,
       tabWidth: 2,
       printWidth: 100,
       trailingComma: 'all',
@@ -63,7 +67,7 @@ export async function formatCode(
     return {
       ok: false,
       code,
-      error: (err as Error).message.split('\n')[0], // только первая строка ошибки
+      error: (err as Error).message.split('\n')[0],
     }
   }
 }

@@ -14,6 +14,7 @@ const ICONS: Record<string, string> = {
   'css-variable': '🎨',
   'html-element': '□',
   'html-id': '#',
+  heading: '#',
 }
 
 export class TocView {

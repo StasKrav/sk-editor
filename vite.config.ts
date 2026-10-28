@@ -1,10 +1,19 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
+  resolve: {
+    dedupe: [
+      '@codemirror/state',
+      '@codemirror/view',
+      '@codemirror/language',
+      '@codemirror/commands',
+      '@codemirror/search',
+      '@lezer/highlight',
+      '@lezer/common',
+    ],
+  },
   build: {
-    // Твой редактор тащит CodeMirror + Prettier + Babel + PostCSS
-    // в один бандл (~2.8 MB), это нормально для такого приложения.
-    // Поднимаем лимит предупреждения, чтобы не шумело при сборке.
+
     chunkSizeWarningLimit: 3000,
   },
 })

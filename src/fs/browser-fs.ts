@@ -49,14 +49,14 @@ export class BrowserFileSystem implements FileSystemProvider {
     if (!window.showOpenFilePicker) {
       throw new Error('File System Access API не поддерживается этим браузером')
     }
-  
+
     try {
       const [handle] = await window.showOpenFilePicker({
         types: [
           {
             description: 'Код',
             accept: {
-              'text/plain': ['.txt', '.md'],
+              'text/plain': ['.txt'],
               'text/html': ['.html', '.htm'],
               'text/css': ['.css'],
               'text/javascript': ['.js', '.mjs', '.jsx'],
@@ -64,13 +64,17 @@ export class BrowserFileSystem implements FileSystemProvider {
               'application/json': ['.json'],
             },
           },
+          {
+            description: 'Markdown',
+            accept: { 'text/markdown': ['.md', '.markdown'] },
+          },
         ],
         multiple: false,
       })
-  
+
       const file = await handle.getFile()
       const content = await file.text()
-  
+
       return { name: handle.name, content, handle }
     } catch (err) {
       if ((err as Error).name === 'AbortError') return null
@@ -78,10 +82,7 @@ export class BrowserFileSystem implements FileSystemProvider {
     }
   }
 
-  async writeViaHandle(
-    handle: FileSystemFileHandle,
-    content: string,
-  ): Promise<void> {
+  async writeViaHandle(handle: FileSystemFileHandle, content: string): Promise<void> {
     const writable = await handle.createWritable()
     await writable.write(content)
     await writable.close()
@@ -107,26 +108,26 @@ export class BrowserFileSystem implements FileSystemProvider {
 
   async createFile(path: string): Promise<void> {
     if (!this.rootHandle) throw new Error('Проект не открыт')
-  
+
     const parts = path.split('/').filter(Boolean)
     const fileName = parts.pop()
     if (!fileName) throw new Error('Пустое имя файла')
-  
+
     let dir: FileSystemDirectoryHandle = this.rootHandle
     for (const part of parts) {
       dir = await dir.getDirectoryHandle(part, { create: true })
     }
-  
+
     // create: true не перезапишет существующий
     await dir.getFileHandle(fileName, { create: true })
   }
-  
+
   async createFolder(path: string): Promise<void> {
     if (!this.rootHandle) throw new Error('Проект не открыт')
-  
+
     const parts = path.split('/').filter(Boolean)
     if (parts.length === 0) throw new Error('Пустое имя папки')
-  
+
     let dir: FileSystemDirectoryHandle = this.rootHandle
     for (const part of parts) {
       dir = await dir.getDirectoryHandle(part, { create: true })
@@ -135,7 +136,7 @@ export class BrowserFileSystem implements FileSystemProvider {
 
   async renameEntry(oldPath: string, newPath: string): Promise<void> {
     if (!this.rootHandle) throw new Error('Проект не открыт')
-  
+
     // находим исходный handle
     const srcParts = oldPath.split('/').filter(Boolean)
     const srcName = srcParts.pop()!
@@ -143,13 +144,11 @@ export class BrowserFileSystem implements FileSystemProvider {
     for (const part of srcParts) {
       srcDir = await srcDir.getDirectoryHandle(part)
     }
-  
+
     // определяем, папка это или файл
     const srcDirHandle = await srcDir.getDirectoryHandle(srcName).catch(() => null)
-    const srcFileHandle = srcDirHandle
-      ? null
-      : await srcDir.getFileHandle(srcName)
-  
+    const srcFileHandle = srcDirHandle ? null : await srcDir.getFileHandle(srcName)
+
     if (srcDirHandle) {
       // это папка — рекурсивно копируем содержимое
       await this.copyDirRecursive(srcDirHandle, newPath)
@@ -168,16 +167,16 @@ export class BrowserFileSystem implements FileSystemProvider {
 
   async copyEntry(srcPath: string, destPath: string): Promise<void> {
     if (!this.rootHandle) throw new Error('Проект не открыт')
-  
+
     const srcParts = srcPath.split('/').filter(Boolean)
     const srcName = srcParts.pop()!
     let srcDir: FileSystemDirectoryHandle = this.rootHandle
     for (const part of srcParts) {
       srcDir = await srcDir.getDirectoryHandle(part)
     }
-  
+
     const srcDirHandle = await srcDir.getDirectoryHandle(srcName).catch(() => null)
-  
+
     if (srcDirHandle) {
       // папка
       await this.copyDirRecursive(srcDirHandle, destPath)
@@ -195,18 +194,18 @@ export class BrowserFileSystem implements FileSystemProvider {
     const parts = path.split('/').filter(Boolean)
     const name = parts.pop()!
     const parentPath = parts.join('/')
-  
+
     const dotIdx = name.lastIndexOf('.')
     const baseName = dotIdx > 0 ? name.slice(0, dotIdx) : name
     const ext = dotIdx > 0 ? name.slice(dotIdx) : ''
-  
+
     let copyName = `${baseName} copy${ext}`
     let n = 2
     while (await this.exists(parentPath ? `${parentPath}/${copyName}` : copyName)) {
       copyName = `${baseName} copy ${n}${ext}`
       n++
     }
-  
+
     const newPath = parentPath ? `${parentPath}/${copyName}` : copyName
     await this.copyEntry(path, newPath)
     return newPath
@@ -240,13 +239,13 @@ export class BrowserFileSystem implements FileSystemProvider {
       }
     }
   }
-  
+
   private async copyDirRecursive(
     srcDir: FileSystemDirectoryHandle,
     destPath: string,
   ): Promise<void> {
     await this.createFolder(destPath)
-  
+
     for await (const entry of srcDir.values()) {
       const childPath = `${destPath}/${entry.name}`
       if (entry.kind === 'directory') {
@@ -262,45 +261,45 @@ export class BrowserFileSystem implements FileSystemProvider {
 
   async deleteEntry(path: string): Promise<void> {
     if (!this.rootHandle) throw new Error('Проект не открыт')
-  
+
     const parts = path.split('/').filter(Boolean)
     const name = parts.pop()
     if (!name) throw new Error('Пустое имя')
-  
+
     let dir: FileSystemDirectoryHandle = this.rootHandle
     for (const part of parts) {
       dir = await dir.getDirectoryHandle(part)
     }
-  
+
     await dir.removeEntry(name, { recursive: true })
   }
 
   /** Проверить разрешение без запроса (для восстановления сессии). */
-async checkPermission(): Promise<boolean> {
-  if (!this.rootHandle) return false
-  if (typeof this.rootHandle.queryPermission !== 'function') return false
-  const opts = { mode: 'readwrite' as const }
-  return (await this.rootHandle.queryPermission(opts)) === 'granted'
-}
+  async checkPermission(): Promise<boolean> {
+    if (!this.rootHandle) return false
+    if (typeof this.rootHandle.queryPermission !== 'function') return false
+    const opts = { mode: 'readwrite' as const }
+    return (await this.rootHandle.queryPermission(opts)) === 'granted'
+  }
 
-async requestPermission(): Promise<boolean> {
-  if (!this.rootHandle) return false
-  if (typeof this.rootHandle.requestPermission !== 'function') return false
-  const opts = { mode: 'readwrite' as const }
-  if ((await this.rootHandle.queryPermission!(opts)) === 'granted') return true
-  return (await this.rootHandle.requestPermission(opts)) === 'granted'
-}
+  async requestPermission(): Promise<boolean> {
+    if (!this.rootHandle) return false
+    if (typeof this.rootHandle.requestPermission !== 'function') return false
+    const opts = { mode: 'readwrite' as const }
+    if ((await this.rootHandle.queryPermission!(opts)) === 'granted') return true
+    return (await this.rootHandle.requestPermission(opts)) === 'granted'
+  }
 
-/** Установить root handle извне (при восстановлении). */
-setRootHandle(handle: FileSystemDirectoryHandle): void {
-  this.rootHandle = handle
-  this.rootName = handle.name
-}
+  /** Установить root handle извне (при восстановлении). */
+  setRootHandle(handle: FileSystemDirectoryHandle): void {
+    this.rootHandle = handle
+    this.rootName = handle.name
+  }
 
-/** Имя корня (для отображения). */
-getRootName(): string {
-  return this.rootName
-}
+  /** Имя корня (для отображения). */
+  getRootName(): string {
+    return this.rootName
+  }
 
   // ── внутренние помощники ─────────────────────
 
@@ -310,7 +309,7 @@ getRootName(): string {
     displayName: string,
   ): Promise<FileEntry> {
     const children: FileEntry[] = []
-  
+
     for await (const entry of dir.values()) {
       const kind: 'file' | 'dir' = entry.kind === 'directory' ? 'dir' : 'file'
 
@@ -331,12 +330,12 @@ getRootName(): string {
         })
       }
     }
-  
+
     children.sort((a, b) => {
       if (a.kind !== b.kind) return a.kind === 'dir' ? -1 : 1
       return a.name.localeCompare(b.name)
     })
-  
+
     return {
       name: displayName,
       path: prefix,
@@ -345,10 +344,7 @@ getRootName(): string {
     }
   }
 
-  private async resolveFile(
-    path: string,
-    create = false,
-  ): Promise<FileSystemFileHandle> {
+  private async resolveFile(path: string, create = false): Promise<FileSystemFileHandle> {
     if (!this.rootHandle) throw new Error('Проект не открыт')
 
     const parts = path.split('/')
@@ -373,9 +369,10 @@ getRootName(): string {
       const handle = await window.showSaveFilePicker({
         suggestedName,
         types: [
-          { description: 'Text', accept: { 'text/plain': ['.txt', '.md'] } },
+          { description: 'Text', accept: { 'text/plain': ['.txt'] } },
+          { description: 'Markdown', accept: { 'text/markdown': ['.md', '.markdown'] } },
           { description: 'HTML', accept: { 'text/html': ['.html', '.htm'] } },
-          { description: 'CSS',  accept: { 'text/css': ['.css'] } },
+          { description: 'CSS', accept: { 'text/css': ['.css'] } },
           { description: 'JavaScript', accept: { 'text/javascript': ['.js', '.mjs'] } },
           { description: 'TypeScript', accept: { 'text/typescript': ['.ts', '.tsx'] } },
         ],
